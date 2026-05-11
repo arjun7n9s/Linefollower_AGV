@@ -1,0 +1,47 @@
+<?xml version="1.0"?>
+<sdf version="1.7">
+  <model name="load_station">
+    <static>true</static>
+    <link name="link">
+      <!-- Structural frame posts -->
+      <collision name="post_fl"><pose>-0.5  0.35 0.5 0 0 0</pose><geometry><box><size>0.06 0.06 1.0</size></box></geometry></collision>
+      <visual name="post_fl"><pose>-0.5  0.35 0.5 0 0 0</pose><geometry><box><size>0.06 0.06 1.0</size></box></geometry><material><ambient>0.3 0.3 0.3 1</ambient></material></visual>
+      <collision name="post_fr"><pose>-0.5 -0.35 0.5 0 0 0</pose><geometry><box><size>0.06 0.06 1.0</size></box></geometry></collision>
+      <visual name="post_fr"><pose>-0.5 -0.35 0.5 0 0 0</pose><geometry><box><size>0.06 0.06 1.0</size></box></geometry><material><ambient>0.3 0.3 0.3 1</ambient></material></visual>
+      <collision name="post_bl"><pose> 0.5  0.35 0.5 0 0 0</pose><geometry><box><size>0.06 0.06 1.0</size></box></geometry></collision>
+      <visual name="post_bl"><pose> 0.5  0.35 0.5 0 0 0</pose><geometry><box><size>0.06 0.06 1.0</size></box></geometry><material><ambient>0.3 0.3 0.3 1</ambient></material></visual>
+      <collision name="post_br"><pose> 0.5 -0.35 0.5 0 0 0</pose><geometry><box><size>0.06 0.06 1.0</size></box></geometry></collision>
+      <visual name="post_br"><pose> 0.5 -0.35 0.5 0 0 0</pose><geometry><box><size>0.06 0.06 1.0</size></box></geometry><material><ambient>0.3 0.3 0.3 1</ambient></material></visual>
+
+      <!-- Shelf surface at AGV pick height (0.25 m) -->
+      <collision name="shelf_col"><pose>0 0 0.25 0 0 0</pose><geometry><box><size>1.0 0.7 0.04</size></box></geometry></collision>
+      <visual name="shelf">
+        <pose>0 0 0.25 0 0 0</pose>
+        <geometry><box><size>1.0 0.7 0.04</size></box></geometry>
+        <material><ambient>0.5 0.5 0.6 1</ambient><diffuse>0.5 0.5 0.6 1</diffuse></material>
+      </visual>
+
+      <!-- Second shelf (storage) -->
+      <collision name="shelf2_col"><pose>0 0 0.65 0 0 0</pose><geometry><box><size>1.0 0.7 0.04</size></box></geometry></collision>
+      <visual name="shelf2">
+        <pose>0 0 0.65 0 0 0</pose>
+        <geometry><box><size>1.0 0.7 0.04</size></box></geometry>
+        <material><ambient>0.5 0.5 0.6 1</ambient></material>
+      </visual>
+
+      <!-- Floor approach zone marking (yellow) -->
+      <visual name="zone_marking">
+        <pose>0 0 0.001 0 0 0</pose>
+        <geometry><box><size>1.4 1.0 0.002</size></box></geometry>
+        <material><ambient>0.9 0.8 0.0 0.5</ambient><diffuse>0.9 0.8 0.0 0.5</diffuse></material>
+      </visual>
+
+      <!-- "LOAD" indicator light (blue) -->
+      <visual name="indicator">
+        <pose>0 0 1.05 0 0 0</pose>
+        <geometry><sphere><radius>0.03</radius></sphere></geometry>
+        <material><ambient>0.0 0.4 1.0 1</ambient><diffuse>0.0 0.4 1.0 1</diffuse><emissive>0.0 0.3 0.8 1</emissive></material>
+      </visual>
+    </link>
+  </model>
+</sdf>

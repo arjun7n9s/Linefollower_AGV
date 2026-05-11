@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<sdf version="1.7">
+  <!--
+    Reusable human actor template.
+    The world file includes this and overrides the <pose> and <script> waypoints
+    for each individual person (worker_1, worker_2, worker_3 …).
+    Uses Gazebo's built-in walk.dae + walking animation from the media path.
+  -->
+  <model name="human_actor">
+    <static>true</static>
+    <link name="body">
+      <pose>0 0 0 0 0 0</pose>
+      <!-- Approximate collision capsule for obstacle avoidance -->
+      <collision name="body_col">
+        <pose>0 0 0.9 0 0 0</pose>
+        <geometry><cylinder><radius>0.3</radius><length>1.6</length></cylinder></geometry>
+      </collision>
+      <visual name="body_vis">
+        <pose>0 0 0 0 0 0</pose>
+        <!-- Geometry approximation — actual skin is the actor DAE -->
+        <geometry><cylinder><radius>0.25</radius><length>1.75</length></cylinder></geometry>
+        <material>
+          <ambient>0.6 0.4 0.2 1</ambient>
+          <diffuse>0.6 0.4 0.2 1</diffuse>
+        </material>
+      </visual>
+    </link>
+  </model>
+</sdf>

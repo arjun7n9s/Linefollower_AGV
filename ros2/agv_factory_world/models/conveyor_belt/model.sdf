@@ -1,0 +1,51 @@
+<?xml version="1.0"?>
+<sdf version="1.7">
+  <model name="conveyor_belt">
+    <static>true</static>
+    <link name="link">
+      <!-- Main body -->
+      <collision name="body_col"><pose>0 0 0.4 0 0 0</pose><geometry><box><size>3.0 0.6 0.8</size></box></geometry></collision>
+      <visual name="body">
+        <pose>0 0 0.4 0 0 0</pose>
+        <geometry><box><size>3.0 0.6 0.8</size></box></geometry>
+        <material><ambient>0.25 0.25 0.25 1</ambient><diffuse>0.25 0.25 0.25 1</diffuse></material>
+      </visual>
+
+      <!-- Belt surface (dark rubber look) -->
+      <visual name="belt_surface">
+        <pose>0 0 0.802 0 0 0</pose>
+        <geometry><box><size>3.0 0.58 0.004</size></box></geometry>
+        <material><ambient>0.08 0.08 0.08 1</ambient><diffuse>0.08 0.08 0.08 1</diffuse></material>
+      </visual>
+
+      <!-- Belt rib strips (grey) -->
+      <visual name="rib_0"><pose>-1.2 0 0.805 0 0 0</pose><geometry><box><size>0.04 0.60 0.005</size></box></geometry><material><ambient>0.4 0.4 0.4 1</ambient></material></visual>
+      <visual name="rib_1"><pose>-0.6 0 0.805 0 0 0</pose><geometry><box><size>0.04 0.60 0.005</size></box></geometry><material><ambient>0.4 0.4 0.4 1</ambient></material></visual>
+      <visual name="rib_2"><pose> 0.0 0 0.805 0 0 0</pose><geometry><box><size>0.04 0.60 0.005</size></box></geometry><material><ambient>0.4 0.4 0.4 1</ambient></material></visual>
+      <visual name="rib_3"><pose> 0.6 0 0.805 0 0 0</pose><geometry><box><size>0.04 0.60 0.005</size></box></geometry><material><ambient>0.4 0.4 0.4 1</ambient></material></visual>
+      <visual name="rib_4"><pose> 1.2 0 0.805 0 0 0</pose><geometry><box><size>0.04 0.60 0.005</size></box></geometry><material><ambient>0.4 0.4 0.4 1</ambient></material></visual>
+
+      <!-- End rollers -->
+      <visual name="roller_front">
+        <pose>1.5 0 0.80 0 1.5708 0</pose>
+        <geometry><cylinder><radius>0.04</radius><length>0.62</length></cylinder></geometry>
+        <material><ambient>0.6 0.6 0.6 1</ambient></material>
+      </visual>
+      <visual name="roller_rear">
+        <pose>-1.5 0 0.80 0 1.5708 0</pose>
+        <geometry><cylinder><radius>0.04</radius><length>0.62</length></cylinder></geometry>
+        <material><ambient>0.6 0.6 0.6 1</ambient></material>
+      </visual>
+
+      <!-- Legs -->
+      <collision name="leg_fl"><pose>-1.35  0.25 0.2 0 0 0</pose><geometry><box><size>0.06 0.06 0.4</size></box></geometry></collision>
+      <visual name="leg_fl"><pose>-1.35  0.25 0.2 0 0 0</pose><geometry><box><size>0.06 0.06 0.4</size></box></geometry><material><ambient>0.3 0.3 0.3 1</ambient></material></visual>
+      <collision name="leg_fr"><pose>-1.35 -0.25 0.2 0 0 0</pose><geometry><box><size>0.06 0.06 0.4</size></box></geometry></collision>
+      <visual name="leg_fr"><pose>-1.35 -0.25 0.2 0 0 0</pose><geometry><box><size>0.06 0.06 0.4</size></box></geometry><material><ambient>0.3 0.3 0.3 1</ambient></material></visual>
+      <collision name="leg_bl"><pose> 1.35  0.25 0.2 0 0 0</pose><geometry><box><size>0.06 0.06 0.4</size></box></geometry></collision>
+      <visual name="leg_bl"><pose> 1.35  0.25 0.2 0 0 0</pose><geometry><box><size>0.06 0.06 0.4</size></box></geometry><material><ambient>0.3 0.3 0.3 1</ambient></material></visual>
+      <collision name="leg_br"><pose> 1.35 -0.25 0.2 0 0 0</pose><geometry><box><size>0.06 0.06 0.4</size></box></geometry></collision>
+      <visual name="leg_br"><pose> 1.35 -0.25 0.2 0 0 0</pose><geometry><box><size>0.06 0.06 0.4</size></box></geometry><material><ambient>0.3 0.3 0.3 1</ambient></material></visual>
+    </link>
+  </model>
+</sdf>

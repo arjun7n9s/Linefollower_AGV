@@ -1,0 +1,485 @@
+<?xml version="1.0"?>
+<sdf version="1.7">
+<world name="agv_factory">
+
+  <physics name="ode" default="true" type="ode">
+    <max_step_size>0.004</max_step_size>
+    <real_time_factor>1.0</real_time_factor>
+    <real_time_update_rate>250</real_time_update_rate>
+  </physics>
+
+  <!-- Ignition Gazebo 6 required system plugins -->
+  <plugin filename="ignition-gazebo-physics-system" name="ignition::gazebo::systems::Physics"/>
+  <plugin filename="ignition-gazebo-sensors-system" name="ignition::gazebo::systems::Sensors">
+    <render_engine>ogre2</render_engine>
+  </plugin>
+  <plugin filename="ignition-gazebo-scene-broadcaster-system" name="ignition::gazebo::systems::SceneBroadcaster"/>
+  <plugin filename="ignition-gazebo-user-commands-system" name="ignition::gazebo::systems::UserCommands"/>
+  <plugin filename="ignition-gazebo-contact-system" name="ignition::gazebo::systems::Contact"/>
+
+    <scene>
+    <ambient>0.30 0.30 0.30 1</ambient>
+    <background>0.18 0.18 0.22 1</background>
+    <shadows>true</shadows>
+  </scene>
+
+  <!-- Soft fill sun — kept dim so ceiling lamps dominate -->
+  <light name="sun" type="directional">
+    <cast_shadows>false</cast_shadows>
+    <pose>0 0 30 0 0 0</pose>
+    <diffuse>0.35 0.35 0.35 1</diffuse>
+    <specular>0.05 0.05 0.05 1</specular>
+    <direction>0 0 -1</direction>
+  </light>
+
+  <!-- ═══ CEILING FLOOD LIGHTS — 3×4 grid, downward spot, full coverage ═══ -->
+  <light name="ceil_n1" type="spot"><pose>-11  7 4.7 0 0 0</pose><diffuse>1.0 0.96 0.85 1</diffuse><specular>0.1 0.1 0.1 1</specular><direction>0 0 -1</direction><spot><inner_angle>0.7</inner_angle><outer_angle>1.2</outer_angle><falloff>1.2</falloff></spot><attenuation><range>15</range><linear>0.03</linear><constant>0.07</constant><quadratic>0.001</quadratic></attenuation><cast_shadows>false</cast_shadows></light>
+  <light name="ceil_n2" type="spot"><pose> -4  7 4.7 0 0 0</pose><diffuse>1.0 0.96 0.85 1</diffuse><specular>0.1 0.1 0.1 1</specular><direction>0 0 -1</direction><spot><inner_angle>0.7</inner_angle><outer_angle>1.2</outer_angle><falloff>1.2</falloff></spot><attenuation><range>15</range><linear>0.03</linear><constant>0.07</constant><quadratic>0.001</quadratic></attenuation><cast_shadows>false</cast_shadows></light>
+  <light name="ceil_n3" type="spot"><pose>  4  7 4.7 0 0 0</pose><diffuse>1.0 0.96 0.85 1</diffuse><specular>0.1 0.1 0.1 1</specular><direction>0 0 -1</direction><spot><inner_angle>0.7</inner_angle><outer_angle>1.2</outer_angle><falloff>1.2</falloff></spot><attenuation><range>15</range><linear>0.03</linear><constant>0.07</constant><quadratic>0.001</quadratic></attenuation><cast_shadows>false</cast_shadows></light>
+  <light name="ceil_n4" type="spot"><pose> 12  7 4.7 0 0 0</pose><diffuse>1.0 0.96 0.85 1</diffuse><specular>0.1 0.1 0.1 1</specular><direction>0 0 -1</direction><spot><inner_angle>0.7</inner_angle><outer_angle>1.2</outer_angle><falloff>1.2</falloff></spot><attenuation><range>15</range><linear>0.03</linear><constant>0.07</constant><quadratic>0.001</quadratic></attenuation><cast_shadows>false</cast_shadows></light>
+  <light name="ceil_m1" type="spot"><pose>-11  1 4.7 0 0 0</pose><diffuse>1.0 0.96 0.85 1</diffuse><specular>0.1 0.1 0.1 1</specular><direction>0 0 -1</direction><spot><inner_angle>0.7</inner_angle><outer_angle>1.2</outer_angle><falloff>1.2</falloff></spot><attenuation><range>15</range><linear>0.03</linear><constant>0.07</constant><quadratic>0.001</quadratic></attenuation><cast_shadows>false</cast_shadows></light>
+  <light name="ceil_m2" type="spot"><pose> -4  1 4.7 0 0 0</pose><diffuse>1.0 0.96 0.85 1</diffuse><specular>0.1 0.1 0.1 1</specular><direction>0 0 -1</direction><spot><inner_angle>0.7</inner_angle><outer_angle>1.2</outer_angle><falloff>1.2</falloff></spot><attenuation><range>15</range><linear>0.03</linear><constant>0.07</constant><quadratic>0.001</quadratic></attenuation><cast_shadows>false</cast_shadows></light>
+  <light name="ceil_m3" type="spot"><pose>  4  1 4.7 0 0 0</pose><diffuse>1.0 0.96 0.85 1</diffuse><specular>0.1 0.1 0.1 1</specular><direction>0 0 -1</direction><spot><inner_angle>0.7</inner_angle><outer_angle>1.2</outer_angle><falloff>1.2</falloff></spot><attenuation><range>15</range><linear>0.03</linear><constant>0.07</constant><quadratic>0.001</quadratic></attenuation><cast_shadows>false</cast_shadows></light>
+  <light name="ceil_m4" type="spot"><pose> 12  1 4.7 0 0 0</pose><diffuse>1.0 0.96 0.85 1</diffuse><specular>0.1 0.1 0.1 1</specular><direction>0 0 -1</direction><spot><inner_angle>0.7</inner_angle><outer_angle>1.2</outer_angle><falloff>1.2</falloff></spot><attenuation><range>15</range><linear>0.03</linear><constant>0.07</constant><quadratic>0.001</quadratic></attenuation><cast_shadows>false</cast_shadows></light>
+  <light name="ceil_s1" type="spot"><pose>-11 -7 4.7 0 0 0</pose><diffuse>1.0 0.96 0.85 1</diffuse><specular>0.1 0.1 0.1 1</specular><direction>0 0 -1</direction><spot><inner_angle>0.7</inner_angle><outer_angle>1.2</outer_angle><falloff>1.2</falloff></spot><attenuation><range>15</range><linear>0.03</linear><constant>0.07</constant><quadratic>0.001</quadratic></attenuation><cast_shadows>false</cast_shadows></light>
+  <light name="ceil_s2" type="spot"><pose> -4 -7 4.7 0 0 0</pose><diffuse>1.0 0.96 0.85 1</diffuse><specular>0.1 0.1 0.1 1</specular><direction>0 0 -1</direction><spot><inner_angle>0.7</inner_angle><outer_angle>1.2</outer_angle><falloff>1.2</falloff></spot><attenuation><range>15</range><linear>0.03</linear><constant>0.07</constant><quadratic>0.001</quadratic></attenuation><cast_shadows>false</cast_shadows></light>
+  <light name="ceil_s3" type="spot"><pose>  4 -7 4.7 0 0 0</pose><diffuse>1.0 0.96 0.85 1</diffuse><specular>0.1 0.1 0.1 1</specular><direction>0 0 -1</direction><spot><inner_angle>0.7</inner_angle><outer_angle>1.2</outer_angle><falloff>1.2</falloff></spot><attenuation><range>15</range><linear>0.03</linear><constant>0.07</constant><quadratic>0.001</quadratic></attenuation><cast_shadows>false</cast_shadows></light>
+  <light name="ceil_s4" type="spot"><pose> 12 -7 4.7 0 0 0</pose><diffuse>1.0 0.96 0.85 1</diffuse><specular>0.1 0.1 0.1 1</specular><direction>0 0 -1</direction><spot><inner_angle>0.7</inner_angle><outer_angle>1.2</outer_angle><falloff>1.2</falloff></spot><attenuation><range>15</range><linear>0.03</linear><constant>0.07</constant><quadratic>0.001</quadratic></attenuation><cast_shadows>false</cast_shadows></light>
+
+  <!-- FACTORY SHELL 30x20 m -->
+  <model name="factory_floor"><static>true</static><pose>0 0 -0.05 0 0 0</pose>
+    <link name="link">
+      <collision name="col"><geometry><box><size>30 20 0.1</size></box></geometry></collision>
+      <visual name="vis"><geometry><box><size>30 20 0.1</size></box></geometry>
+        <material><ambient>0.55 0.55 0.55 1</ambient><diffuse>0.55 0.55 0.55 1</diffuse></material>
+      </visual>
+    </link>
+  </model>
+
+  <model name="wall_north"><static>true</static><pose>0 10 2.5 0 0 0</pose>
+    <link name="link"><collision name="col"><geometry><box><size>30 0.2 5</size></box></geometry></collision><visual name="vis"><geometry><box><size>30 0.2 5</size></box></geometry><material><ambient>0.8 0.78 0.72 1</ambient></material></visual></link></model>
+  <model name="wall_south"><static>true</static><pose>0 -10 2.5 0 0 0</pose>
+    <link name="link"><collision name="col"><geometry><box><size>30 0.2 5</size></box></geometry></collision><visual name="vis"><geometry><box><size>30 0.2 5</size></box></geometry><material><ambient>0.8 0.78 0.72 1</ambient></material></visual></link></model>
+  <model name="wall_east"><static>true</static><pose>15 0 2.5 0 0 0</pose>
+    <link name="link"><collision name="col"><geometry><box><size>0.2 20 5</size></box></geometry></collision><visual name="vis"><geometry><box><size>0.2 20 5</size></box></geometry><material><ambient>0.8 0.78 0.72 1</ambient></material></visual></link></model>
+  <model name="wall_west"><static>true</static><pose>-15 0 2.5 0 0 0</pose>
+    <link name="link"><collision name="col"><geometry><box><size>0.2 20 5</size></box></geometry></collision><visual name="vis"><geometry><box><size>0.2 20 5</size></box></geometry><material><ambient>0.8 0.78 0.72 1</ambient></material></visual></link></model>
+
+  <!-- Divider wall with 4 m central gap for AGVs -->
+  <model name="wall_div_w"><static>true</static><pose>-9 -6.5 1.5 0 0 0</pose>
+    <link name="link"><collision name="col"><geometry><box><size>12 0.15 3</size></box></geometry></collision><visual name="vis"><geometry><box><size>12 0.15 3</size></box></geometry><material><ambient>0.7 0.7 0.7 1</ambient></material></visual></link></model>
+  <model name="wall_div_e"><static>true</static><pose>9 -6.5 1.5 0 0 0</pose>
+    <link name="link"><collision name="col"><geometry><box><size>12 0.15 3</size></box></geometry></collision><visual name="vis"><geometry><box><size>12 0.15 3</size></box></geometry><material><ambient>0.7 0.7 0.7 1</ambient></material></visual></link></model>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       AGV GUIDE LINE NETWORK  — all lines inside x=[-14,+14] y=[-9,+9]
+       Yellow = main routes  |  White = dock approach lanes
+
+       NODE MAP:
+         DOCK_1(-6,-8.8)  DOCK_2(0,-8.8)  DOCK_3(6,-8.8)
+         J_SW(-6,-5)  J_SC(0,-5)  J_SE(6,-5)      ← south junction row
+         J_WS(-12,-5) ←─ south horizontal extends west
+         J_ES( 12,-5) ←─ south horizontal extends east
+         J_WN(-12, 5) ←─ north horizontal left end
+         J_NW(-6,  5)  J_NC(0,5)  J_NE(6,5)
+         J_EN( 12, 5) ←─ north horizontal right end
+         DEPOT_A(-12, 8)  DEPOT_B(12, 8)  DEPOT_C(-12,-3)
+         J_SHOP_S(8,-5)  J_SHOP_M(8,0)  J_SHOP_N(8,5)
+
+       EDGES (line segments):
+         Dock lanes (white):
+           DOCK_1 ↕ J_SW   DOCK_2 ↕ J_SC   DOCK_3 ↕ J_SE
+         South row (yellow, y=-5, x=-12..+12):
+           J_WS ↔ J_SW ↔ J_SC ↔ J_SE ↔ J_ES
+         West spine (yellow, x=-12, y=-5..+5):
+           J_WS ↔ DEPOT_C ↔ J_WN
+         East spine (yellow, x=+12, y=-5..+5):
+           J_ES ↔ J_EN
+         North row (yellow, y=+5, x=-12..+12):
+           J_WN ↔ J_NW ↔ J_NC ↔ J_NE ↔ J_EN
+         Depot spurs (yellow):
+           J_WN(-12,5) ↕ DEPOT_A(-12,8)
+           J_EN(+12,5) ↕ DEPOT_B(+12,8)
+         Shop spine (yellow, x=+8, y=-5..+5):
+           J_SHOP_S ↔ J_SHOP_M ↔ J_SHOP_N
+         Shop connectors (yellow, y=+5 / y=-5 at x=6..8):
+           J_NE(6,5) ↔ J_SHOP_N(8,5)
+           J_SE(6,-5) ↔ J_SHOP_S(8,-5)
+         Mid cross connector (yellow, y=0 x=-12..8):
+           J_WS_mid(-12,0) ↔ J_SHOP_M(8,0)
+  ═══════════════════════════════════════════════════════════════ -->
+
+  <!-- ── DOCK APPROACH LANES (white, one per AGV) ──────────────────── -->
+  <!-- DOCK_1 (-6,-8.8) to J_SW (-6,-5): length=3.8, centre at y=-6.9  -->
+  <model name="dock_line_1"><static>true</static><pose>-6 -6.9 0.003 0 0 0</pose>
+    <link name="l"><visual name="v"><geometry><box><size>0.12 3.8 0.004</size></box></geometry>
+      <material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><emissive>0.8 0.8 0.8 1</emissive></material>
+    </visual></link></model>
+  <!-- DOCK_2 (0,-8.8) to J_SC (0,-5) -->
+  <model name="dock_line_2"><static>true</static><pose>0 -6.9 0.003 0 0 0</pose>
+    <link name="l"><visual name="v"><geometry><box><size>0.12 3.8 0.004</size></box></geometry>
+      <material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><emissive>0.8 0.8 0.8 1</emissive></material>
+    </visual></link></model>
+  <!-- DOCK_3 (6,-8.8) to J_SE (6,-5) -->
+  <model name="dock_line_3"><static>true</static><pose>6 -6.9 0.003 0 0 0</pose>
+    <link name="l"><visual name="v"><geometry><box><size>0.12 3.8 0.004</size></box></geometry>
+      <material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><emissive>0.8 0.8 0.8 1</emissive></material>
+    </visual></link></model>
+
+  <!-- ── SOUTH JUNCTION ROW (yellow, y=-5, x=-12 to +12) ──────────── -->
+  <model name="line_south"><static>true</static><pose>0 -5 0.003 0 0 0</pose>
+    <link name="l"><visual name="v"><geometry><box><size>24 0.12 0.004</size></box></geometry>
+      <material><ambient>1.0 0.9 0.0 1</ambient><diffuse>1.0 0.9 0.0 1</diffuse><emissive>0.6 0.55 0.0 1</emissive></material>
+    </visual></link></model>
+
+  <!-- ── WEST SPINE (yellow, x=-12, y=-5 to +5, length=10) ─────────── -->
+  <model name="line_spine_w"><static>true</static><pose>-12 0 0.003 0 0 0</pose>
+    <link name="l"><visual name="v"><geometry><box><size>0.12 10 0.004</size></box></geometry>
+      <material><ambient>1.0 0.9 0.0 1</ambient><diffuse>1.0 0.9 0.0 1</diffuse><emissive>0.6 0.55 0.0 1</emissive></material>
+    </visual></link></model>
+
+  <!-- ── DEPOT-C SPUR (yellow, x=-12, y=-3 to -5 already covered by spine)
+       Depot-C is AT (-12,-3) so it sits on the west spine — no extra spur needed.
+       Add a small T-marker box at the depot stop point for visibility. ─────── -->
+  <model name="line_depot_c_mark"><static>true</static><pose>-12 -3 0.003 0 0 0</pose>
+    <link name="l"><visual name="v"><geometry><box><size>0.5 0.12 0.004</size></box></geometry>
+      <material><ambient>1.0 0.5 0.0 1</ambient><diffuse>1.0 0.5 0.0 1</diffuse><emissive>0.6 0.3 0.0 1</emissive></material>
+    </visual></link></model>
+
+  <!-- ── EAST SPINE (yellow, x=+12, y=-5 to +5, length=10) ────────── -->
+  <model name="line_spine_e"><static>true</static><pose>12 0 0.003 0 0 0</pose>
+    <link name="l"><visual name="v"><geometry><box><size>0.12 10 0.004</size></box></geometry>
+      <material><ambient>1.0 0.9 0.0 1</ambient><diffuse>1.0 0.9 0.0 1</diffuse><emissive>0.6 0.55 0.0 1</emissive></material>
+    </visual></link></model>
+
+  <!-- ── NORTH JUNCTION ROW (yellow, y=+5, x=-12 to +12) ──────────── -->
+  <model name="line_north"><static>true</static><pose>0 5 0.003 0 0 0</pose>
+    <link name="l"><visual name="v"><geometry><box><size>24 0.12 0.004</size></box></geometry>
+      <material><ambient>1.0 0.9 0.0 1</ambient><diffuse>1.0 0.9 0.0 1</diffuse><emissive>0.6 0.55 0.0 1</emissive></material>
+    </visual></link></model>
+
+  <!-- ── DEPOT-A SPUR (yellow, x=-12, y=+5 to +8, length=3) ────────── -->
+  <model name="line_spur_a"><static>true</static><pose>-12 6.5 0.003 0 0 0</pose>
+    <link name="l"><visual name="v"><geometry><box><size>0.12 3 0.004</size></box></geometry>
+      <material><ambient>1.0 0.9 0.0 1</ambient><diffuse>1.0 0.9 0.0 1</diffuse><emissive>0.6 0.55 0.0 1</emissive></material>
+    </visual></link></model>
+
+  <!-- ── DEPOT-B SPUR (yellow, x=+12, y=+5 to +8, length=3) ─────────── -->
+  <model name="line_spur_b"><static>true</static><pose>12 6.5 0.003 0 0 0</pose>
+    <link name="l"><visual name="v"><geometry><box><size>0.12 3 0.004</size></box></geometry>
+      <material><ambient>1.0 0.9 0.0 1</ambient><diffuse>1.0 0.9 0.0 1</diffuse><emissive>0.6 0.55 0.0 1</emissive></material>
+    </visual></link></model>
+
+  <!-- ── MID HORIZONTAL (yellow, y=0, x=-12 to +8, length=20) ─────── -->
+  <model name="line_mid"><static>true</static><pose>-2 0 0.003 0 0 0</pose>
+    <link name="l"><visual name="v"><geometry><box><size>20 0.12 0.004</size></box></geometry>
+      <material><ambient>1.0 0.9 0.0 1</ambient><diffuse>1.0 0.9 0.0 1</diffuse><emissive>0.6 0.55 0.0 1</emissive></material>
+    </visual></link></model>
+
+  <!-- ── SHOP SPINE (yellow, x=+8, y=-5 to +5, length=10) ─────────── -->
+  <model name="line_shop_spine"><static>true</static><pose>8 0 0.003 0 0 0</pose>
+    <link name="l"><visual name="v"><geometry><box><size>0.12 10 0.004</size></box></geometry>
+      <material><ambient>1.0 0.9 0.0 1</ambient><diffuse>1.0 0.9 0.0 1</diffuse><emissive>0.6 0.55 0.0 1</emissive></material>
+    </visual></link></model>
+
+  <!-- ── SHOP NORTH CONNECTOR (yellow, y=+5, x=+6 to +8, length=2) ── -->
+  <model name="line_shop_conn_n"><static>true</static><pose>7 5 0.003 0 0 0</pose>
+    <link name="l"><visual name="v"><geometry><box><size>2 0.12 0.004</size></box></geometry>
+      <material><ambient>1.0 0.9 0.0 1</ambient><diffuse>1.0 0.9 0.0 1</diffuse><emissive>0.6 0.55 0.0 1</emissive></material>
+    </visual></link></model>
+
+  <!-- ── SHOP SOUTH CONNECTOR (yellow, y=-5, x=+6 to +8, length=2) ── -->
+  <model name="line_shop_conn_s"><static>true</static><pose>7 -5 0.003 0 0 0</pose>
+    <link name="l"><visual name="v"><geometry><box><size>2 0.12 0.004</size></box></geometry>
+      <material><ambient>1.0 0.9 0.0 1</ambient><diffuse>1.0 0.9 0.0 1</diffuse><emissive>0.6 0.55 0.0 1</emissive></material>
+    </visual></link></model>
+
+  <!-- STATIONS -->
+  <include><uri>model://load_station</uri><name>load_A</name><pose>-12 8.5 0 0 0 3.1416</pose></include>
+  <include><uri>model://load_station</uri><name>load_B</name><pose> 12 8.5 0 0 0 3.1416</pose></include>
+  <include><uri>model://conveyor_belt</uri><name>conveyor_A</name><pose>-12 8.5 0 0 0 0</pose></include>
+  <include><uri>model://conveyor_belt</uri><name>conveyor_B</name><pose> 12 8.5 0 0 0 0</pose></include>
+
+  <include><uri>model://drop_station</uri><name>drop_1</name><pose>-8 -4 0 0 0 0</pose></include>
+  <include><uri>model://drop_station</uri><name>drop_2</name><pose> 0 -4 0 0 0 0</pose></include>
+  <include><uri>model://drop_station</uri><name>drop_3</name><pose> 8 -4 0 0 0 0</pose></include>
+
+  <include><uri>model://docking_station</uri><name>dock_1</name><pose>-6 -9 0 0 0 1.5708</pose></include>
+  <include><uri>model://docking_station</uri><name>dock_2</name><pose> 0 -9 0 0 0 1.5708</pose></include>
+  <include><uri>model://docking_station</uri><name>dock_3</name><pose> 6 -9 0 0 0 1.5708</pose></include>
+  <include><uri>model://charging_pad</uri><name>charge_1</name><pose>-6 -8.6 0 0 0 0</pose></include>
+  <include><uri>model://charging_pad</uri><name>charge_2</name><pose> 0 -8.6 0 0 0 0</pose></include>
+  <include><uri>model://charging_pad</uri><name>charge_3</name><pose> 6 -8.6 0 0 0 0</pose></include>
+
+  <!-- AGV ROBOTS at home docks -->
+  <include><uri>model://agv_robot</uri><name>agv_1</name><pose>-6 -8.8 0 0 0 1.5708</pose></include>
+  <include><uri>model://agv_robot</uri><name>agv_2</name><pose> 0 -8.8 0 0 0 1.5708</pose></include>
+  <include><uri>model://agv_robot</uri><name>agv_3</name><pose> 6 -8.8 0 0 0 1.5708</pose></include>
+
+  <!-- CARTONS on load shelves -->
+  <include><uri>model://carton_box</uri><name>carton_A1</name><pose>-12.4 8.5 0.44 0 0 0</pose></include>
+  <include><uri>model://carton_box</uri><name>carton_A2</name><pose>-12.0 8.5 0.44 0 0 0</pose></include>
+  <include><uri>model://carton_box</uri><name>carton_A3</name><pose>-11.6 8.5 0.44 0 0 0</pose></include>
+  <include><uri>model://carton_box</uri><name>carton_B1</name><pose> 12.4 8.5 0.44 0 0 0</pose></include>
+  <include><uri>model://carton_box</uri><name>carton_B2</name><pose> 12.0 8.5 0.44 0 0 0</pose></include>
+  <include><uri>model://carton_box</uri><name>carton_B3</name><pose> 11.6 8.5 0.44 0 0 0</pose></include>
+
+  <!-- PALLETS at drop stations -->
+  <include><uri>model://pallet</uri><name>pallet_1</name><pose>-8 -4 0.001 0 0 0</pose></include>
+  <include><uri>model://pallet</uri><name>pallet_2</name><pose> 0 -4 0.001 0 0 0</pose></include>
+  <include><uri>model://pallet</uri><name>pallet_3</name><pose> 8 -4 0.001 0 0 0</pose></include>
+
+  <!-- WALKING ACTORS (3 workers, looping waypoints) -->
+  <actor name="worker_1">
+    <pose>-12 7 1.0 0 0 0</pose>
+    <skin><filename>walk.dae</filename><scale>1.0</scale></skin>
+    <animation name="walking"><filename>walk.dae</filename><interpolate_x>true</interpolate_x></animation>
+    <script>
+      <loop>true</loop><auto_start>true</auto_start>
+      <trajectory id="0" type="walking">
+        <waypoint><time>0</time><pose>-12  7 1.0 0 0 -1.5708</pose></waypoint>
+        <waypoint><time>5</time><pose>-12  5 1.0 0 0 -1.5708</pose></waypoint>
+        <waypoint><time>12</time><pose>-8   5 1.0 0 0  0.0</pose></waypoint>
+        <waypoint><time>17</time><pose>-8  -4 1.0 0 0 -1.5708</pose></waypoint>
+        <waypoint><time>24</time><pose>-12 -4 1.0 0 0  3.1416</pose></waypoint>
+        <waypoint><time>30</time><pose>-12  7 1.0 0 0  1.5708</pose></waypoint>
+      </trajectory>
+    </script>
+  </actor>
+
+  <actor name="worker_2">
+    <pose>0 2 1.0 0 0 0</pose>
+    <skin><filename>walk.dae</filename><scale>1.0</scale></skin>
+    <animation name="walking"><filename>walk.dae</filename><interpolate_x>true</interpolate_x></animation>
+    <script>
+      <loop>true</loop><auto_start>true</auto_start>
+      <trajectory id="0" type="walking">
+        <waypoint><time>0</time><pose> 0  2 1.0 0 0  1.5708</pose></waypoint>
+        <waypoint><time>6</time><pose> 0  7 1.0 0 0  1.5708</pose></waypoint>
+        <waypoint><time>12</time><pose> 6  7 1.0 0 0  0.0</pose></waypoint>
+        <waypoint><time>18</time><pose> 6  2 1.0 0 0 -1.5708</pose></waypoint>
+        <waypoint><time>24</time><pose> 0  2 1.0 0 0  3.1416</pose></waypoint>
+      </trajectory>
+    </script>
+  </actor>
+
+  <actor name="worker_3">
+    <pose>5 -3 1.0 0 0 0</pose>
+    <skin><filename>walk.dae</filename><scale>1.0</scale></skin>
+    <animation name="walking"><filename>walk.dae</filename><interpolate_x>true</interpolate_x></animation>
+    <script>
+      <loop>true</loop><auto_start>true</auto_start>
+      <trajectory id="0" type="walking">
+        <waypoint><time>0</time><pose>  5 -3 1.0 0 0  0.0</pose></waypoint>
+        <waypoint><time>5</time><pose>  10 -3 1.0 0 0  0.0</pose></waypoint>
+        <waypoint><time>10</time><pose> 10 -5 1.0 0 0 -1.5708</pose></waypoint>
+        <waypoint><time>16</time><pose>  5 -5 1.0 0 0  3.1416</pose></waypoint>
+        <waypoint><time>21</time><pose>  5 -3 1.0 0 0  1.5708</pose></waypoint>
+      </trajectory>
+    </script>
+  </actor>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       MATERIAL DEPOTS  (source corners)
+       DEPOT-A  NW corner  (-13,  8)   Material: red boxes
+       DEPOT-B  NE corner  (+13,  8)   Material: green boxes
+       DEPOT-C  SW corner  (-13, -3)   Material: blue boxes
+  ═══════════════════════════════════════════════════════════════ -->
+
+  <!-- DEPOT-A floor zone (red tint) -->
+  <model name="zone_depot_a"><static>true</static><pose>-13 8 0.001 0 0 0</pose>
+    <link name="l"><visual name="v"><geometry><box><size>3.5 3.5 0.002</size></box></geometry>
+      <material><ambient>0.8 0.1 0.1 0.35</ambient><diffuse>0.8 0.1 0.1 0.35</diffuse></material>
+    </visual></link></model>
+
+  <!-- DEPOT-A signage post -->
+  <model name="sign_depot_a"><static>true</static><pose>-13 9.2 0 0 0 0</pose>
+    <link name="l">
+      <collision name="c"><pose>0 0 1.0 0 0 0</pose><geometry><box><size>0.08 0.08 2.0</size></box></geometry></collision>
+      <visual name="pole"><pose>0 0 1.0 0 0 0</pose><geometry><box><size>0.08 0.08 2.0</size></box></geometry><material><ambient>0.3 0.3 0.3 1</ambient></material></visual>
+      <visual name="board"><pose>0 0 2.2 0 0 0</pose><geometry><box><size>0.05 1.0 0.4</size></box></geometry>
+        <material><ambient>0.8 0.1 0.1 1</ambient><diffuse>0.8 0.1 0.1 1</diffuse></material>
+      </visual>
+    </link></model>
+
+  <!-- DEPOT-A material stacks (red boxes) -->
+  <model name="mat_a_1"><static>true</static><pose>-13.4 8.2 0.15 0 0 0</pose>
+    <link name="l"><collision name="c"><geometry><box><size>0.4 0.3 0.3</size></box></geometry></collision>
+      <visual name="v"><geometry><box><size>0.4 0.3 0.3</size></box></geometry><material><ambient>0.85 0.1 0.1 1</ambient><diffuse>0.85 0.1 0.1 1</diffuse></material></visual></link></model>
+  <model name="mat_a_2"><static>true</static><pose>-13.0 8.2 0.15 0 0 0</pose>
+    <link name="l"><collision name="c"><geometry><box><size>0.4 0.3 0.3</size></box></geometry></collision>
+      <visual name="v"><geometry><box><size>0.4 0.3 0.3</size></box></geometry><material><ambient>0.85 0.1 0.1 1</ambient></material></visual></link></model>
+  <model name="mat_a_3"><static>true</static><pose>-12.6 8.2 0.15 0 0 0</pose>
+    <link name="l"><collision name="c"><geometry><box><size>0.4 0.3 0.3</size></box></geometry></collision>
+      <visual name="v"><geometry><box><size>0.4 0.3 0.3</size></box></geometry><material><ambient>0.85 0.1 0.1 1</ambient></material></visual></link></model>
+  <model name="mat_a_4"><static>true</static><pose>-13.4 8.2 0.45 0 0 0</pose>
+    <link name="l"><collision name="c"><geometry><box><size>0.4 0.3 0.3</size></box></geometry></collision>
+      <visual name="v"><geometry><box><size>0.4 0.3 0.3</size></box></geometry><material><ambient>0.85 0.1 0.1 1</ambient></material></visual></link></model>
+  <model name="mat_a_5"><static>true</static><pose>-13.0 8.2 0.45 0 0 0</pose>
+    <link name="l"><collision name="c"><geometry><box><size>0.4 0.3 0.3</size></box></geometry></collision>
+      <visual name="v"><geometry><box><size>0.4 0.3 0.3</size></box></geometry><material><ambient>0.85 0.1 0.1 1</ambient></material></visual></link></model>
+
+  <!-- DEPOT-B floor zone (green tint) -->
+  <model name="zone_depot_b"><static>true</static><pose>13 8 0.001 0 0 0</pose>
+    <link name="l"><visual name="v"><geometry><box><size>3.5 3.5 0.002</size></box></geometry>
+      <material><ambient>0.1 0.75 0.1 0.35</ambient><diffuse>0.1 0.75 0.1 0.35</diffuse></material>
+    </visual></link></model>
+
+  <!-- DEPOT-B signage post -->
+  <model name="sign_depot_b"><static>true</static><pose>13 9.2 0 0 0 0</pose>
+    <link name="l">
+      <collision name="c"><pose>0 0 1.0 0 0 0</pose><geometry><box><size>0.08 0.08 2.0</size></box></geometry></collision>
+      <visual name="pole"><pose>0 0 1.0 0 0 0</pose><geometry><box><size>0.08 0.08 2.0</size></box></geometry><material><ambient>0.3 0.3 0.3 1</ambient></material></visual>
+      <visual name="board"><pose>0 0 2.2 0 0 0</pose><geometry><box><size>0.05 1.0 0.4</size></box></geometry>
+        <material><ambient>0.1 0.75 0.1 1</ambient><diffuse>0.1 0.75 0.1 1</diffuse></material>
+      </visual>
+    </link></model>
+
+  <!-- DEPOT-B material stacks (green boxes) -->
+  <model name="mat_b_1"><static>true</static><pose>12.6 8.2 0.15 0 0 0</pose>
+    <link name="l"><collision name="c"><geometry><box><size>0.4 0.3 0.3</size></box></geometry></collision>
+      <visual name="v"><geometry><box><size>0.4 0.3 0.3</size></box></geometry><material><ambient>0.1 0.75 0.1 1</ambient><diffuse>0.1 0.75 0.1 1</diffuse></material></visual></link></model>
+  <model name="mat_b_2"><static>true</static><pose>13.0 8.2 0.15 0 0 0</pose>
+    <link name="l"><collision name="c"><geometry><box><size>0.4 0.3 0.3</size></box></geometry></collision>
+      <visual name="v"><geometry><box><size>0.4 0.3 0.3</size></box></geometry><material><ambient>0.1 0.75 0.1 1</ambient></material></visual></link></model>
+  <model name="mat_b_3"><static>true</static><pose>13.4 8.2 0.15 0 0 0</pose>
+    <link name="l"><collision name="c"><geometry><box><size>0.4 0.3 0.3</size></box></geometry></collision>
+      <visual name="v"><geometry><box><size>0.4 0.3 0.3</size></box></geometry><material><ambient>0.1 0.75 0.1 1</ambient></material></visual></link></model>
+  <model name="mat_b_4"><static>true</static><pose>12.6 8.2 0.45 0 0 0</pose>
+    <link name="l"><collision name="c"><geometry><box><size>0.4 0.3 0.3</size></box></geometry></collision>
+      <visual name="v"><geometry><box><size>0.4 0.3 0.3</size></box></geometry><material><ambient>0.1 0.75 0.1 1</ambient></material></visual></link></model>
+  <model name="mat_b_5"><static>true</static><pose>13.0 8.2 0.45 0 0 0</pose>
+    <link name="l"><collision name="c"><geometry><box><size>0.4 0.3 0.3</size></box></geometry></collision>
+      <visual name="v"><geometry><box><size>0.4 0.3 0.3</size></box></geometry><material><ambient>0.1 0.75 0.1 1</ambient></material></visual></link></model>
+
+  <!-- DEPOT-C floor zone (blue tint) -->
+  <model name="zone_depot_c"><static>true</static><pose>-13 -3 0.001 0 0 0</pose>
+    <link name="l"><visual name="v"><geometry><box><size>3.5 3.5 0.002</size></box></geometry>
+      <material><ambient>0.1 0.1 0.85 0.35</ambient><diffuse>0.1 0.1 0.85 0.35</diffuse></material>
+    </visual></link></model>
+
+  <!-- DEPOT-C signage post -->
+  <model name="sign_depot_c"><static>true</static><pose>-13 -1.5 0 0 0 0</pose>
+    <link name="l">
+      <collision name="c"><pose>0 0 1.0 0 0 0</pose><geometry><box><size>0.08 0.08 2.0</size></box></geometry></collision>
+      <visual name="pole"><pose>0 0 1.0 0 0 0</pose><geometry><box><size>0.08 0.08 2.0</size></box></geometry><material><ambient>0.3 0.3 0.3 1</ambient></material></visual>
+      <visual name="board"><pose>0 0 2.2 0 0 0</pose><geometry><box><size>0.05 1.0 0.4</size></box></geometry>
+        <material><ambient>0.1 0.1 0.85 1</ambient><diffuse>0.1 0.1 0.85 1</diffuse></material>
+      </visual>
+    </link></model>
+
+  <!-- DEPOT-C material stacks (blue boxes) -->
+  <model name="mat_c_1"><static>true</static><pose>-13.4 -3 0.15 0 0 0</pose>
+    <link name="l"><collision name="c"><geometry><box><size>0.4 0.3 0.3</size></box></geometry></collision>
+      <visual name="v"><geometry><box><size>0.4 0.3 0.3</size></box></geometry><material><ambient>0.1 0.1 0.85 1</ambient><diffuse>0.1 0.1 0.85 1</diffuse></material></visual></link></model>
+  <model name="mat_c_2"><static>true</static><pose>-13.0 -3 0.15 0 0 0</pose>
+    <link name="l"><collision name="c"><geometry><box><size>0.4 0.3 0.3</size></box></geometry></collision>
+      <visual name="v"><geometry><box><size>0.4 0.3 0.3</size></box></geometry><material><ambient>0.1 0.1 0.85 1</ambient></material></visual></link></model>
+  <model name="mat_c_3"><static>true</static><pose>-12.6 -3 0.15 0 0 0</pose>
+    <link name="l"><collision name="c"><geometry><box><size>0.4 0.3 0.3</size></box></geometry></collision>
+      <visual name="v"><geometry><box><size>0.4 0.3 0.3</size></box></geometry><material><ambient>0.1 0.1 0.85 1</ambient></material></visual></link></model>
+  <model name="mat_c_4"><static>true</static><pose>-13.4 -3 0.45 0 0 0</pose>
+    <link name="l"><collision name="c"><geometry><box><size>0.4 0.3 0.3</size></box></geometry></collision>
+      <visual name="v"><geometry><box><size>0.4 0.3 0.3</size></box></geometry><material><ambient>0.1 0.1 0.85 1</ambient></material></visual></link></model>
+  <model name="mat_c_5"><static>true</static><pose>-13.0 -3 0.45 0 0 0</pose>
+    <link name="l"><collision name="c"><geometry><box><size>0.4 0.3 0.3</size></box></geometry></collision>
+      <visual name="v"><geometry><box><size>0.4 0.3 0.3</size></box></geometry><material><ambient>0.1 0.1 0.85 1</ambient></material></visual></link></model>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       SHOP ZONES  (SE quadrant, consumers)
+       SHOP-1  x=8   y=5   (needs Material A - red)
+       SHOP-2  x=8   y=0   (needs Material B - green)
+       SHOP-3  x=8   y=-5  (needs Material C - blue)
+  ═══════════════════════════════════════════════════════════════ -->
+
+  <!-- SHOP-1 floor zone + shelf + stock indicator post -->
+  <model name="zone_shop_1"><static>true</static><pose>8 5 0.001 0 0 0</pose>
+    <link name="l"><visual name="v"><geometry><box><size>3.0 2.5 0.002</size></box></geometry>
+      <material><ambient>0.9 0.85 0.1 0.3</ambient><diffuse>0.9 0.85 0.1 0.3</diffuse></material>
+    </visual></link></model>
+
+  <model name="shop_shelf_1"><static>true</static><pose>9.5 5 0 0 0 0</pose>
+    <link name="l">
+      <collision name="c"><pose>0 0 0.4 0 0 0</pose><geometry><box><size>0.15 1.2 0.8</size></box></geometry></collision>
+      <visual name="frame"><pose>0 0 0.4 0 0 0</pose><geometry><box><size>0.15 1.2 0.8</size></box></geometry><material><ambient>0.5 0.5 0.5 1</ambient></material></visual>
+      <!-- stock indicator LED (starts green, changed by node) -->
+      <visual name="stock_led"><pose>0 0 0.85 0 0 0</pose><geometry><sphere><radius>0.06</radius></sphere></geometry>
+        <material><ambient>0 1 0 1</ambient><diffuse>0 1 0 1</diffuse><emissive>0 0.7 0 1</emissive></material>
+      </visual>
+    </link></model>
+
+  <model name="sign_shop_1"><static>true</static><pose>9.5 6.3 0 0 0 0</pose>
+    <link name="l">
+      <collision name="c"><pose>0 0 1.0 0 0 0</pose><geometry><box><size>0.08 0.08 2.0</size></box></geometry></collision>
+      <visual name="pole"><pose>0 0 1.0 0 0 0</pose><geometry><box><size>0.08 0.08 2.0</size></box></geometry><material><ambient>0.3 0.3 0.3 1</ambient></material></visual>
+      <visual name="board"><pose>0 0 2.2 0 0 0</pose><geometry><box><size>0.05 0.9 0.4</size></box></geometry>
+        <material><ambient>0.9 0.7 0.0 1</ambient><diffuse>0.9 0.7 0.0 1</diffuse></material>
+      </visual>
+    </link></model>
+
+  <!-- SHOP-2 -->
+  <model name="zone_shop_2"><static>true</static><pose>8 0 0.001 0 0 0</pose>
+    <link name="l"><visual name="v"><geometry><box><size>3.0 2.5 0.002</size></box></geometry>
+      <material><ambient>0.9 0.85 0.1 0.3</ambient></material></visual></link></model>
+
+  <model name="shop_shelf_2"><static>true</static><pose>9.5 0 0 0 0 0</pose>
+    <link name="l">
+      <collision name="c"><pose>0 0 0.4 0 0 0</pose><geometry><box><size>0.15 1.2 0.8</size></box></geometry></collision>
+      <visual name="frame"><pose>0 0 0.4 0 0 0</pose><geometry><box><size>0.15 1.2 0.8</size></box></geometry><material><ambient>0.5 0.5 0.5 1</ambient></material></visual>
+      <visual name="stock_led"><pose>0 0 0.85 0 0 0</pose><geometry><sphere><radius>0.06</radius></sphere></geometry>
+        <material><ambient>0 1 0 1</ambient><diffuse>0 1 0 1</diffuse><emissive>0 0.7 0 1</emissive></material>
+      </visual>
+    </link></model>
+
+  <model name="sign_shop_2"><static>true</static><pose>9.5 1.3 0 0 0 0</pose>
+    <link name="l">
+      <collision name="c"><pose>0 0 1.0 0 0 0</pose><geometry><box><size>0.08 0.08 2.0</size></box></geometry></collision>
+      <visual name="pole"><pose>0 0 1.0 0 0 0</pose><geometry><box><size>0.08 0.08 2.0</size></box></geometry><material><ambient>0.3 0.3 0.3 1</ambient></material></visual>
+      <visual name="board"><pose>0 0 2.2 0 0 0</pose><geometry><box><size>0.05 0.9 0.4</size></box></geometry>
+        <material><ambient>0.9 0.7 0.0 1</ambient></material></visual>
+    </link></model>
+
+  <!-- SHOP-3 -->
+  <model name="zone_shop_3"><static>true</static><pose>8 -5 0.001 0 0 0</pose>
+    <link name="l"><visual name="v"><geometry><box><size>3.0 2.5 0.002</size></box></geometry>
+      <material><ambient>0.9 0.85 0.1 0.3</ambient></material></visual></link></model>
+
+  <model name="shop_shelf_3"><static>true</static><pose>9.5 -5 0 0 0 0</pose>
+    <link name="l">
+      <collision name="c"><pose>0 0 0.4 0 0 0</pose><geometry><box><size>0.15 1.2 0.8</size></box></geometry></collision>
+      <visual name="frame"><pose>0 0 0.4 0 0 0</pose><geometry><box><size>0.15 1.2 0.8</size></box></geometry><material><ambient>0.5 0.5 0.5 1</ambient></material></visual>
+      <visual name="stock_led"><pose>0 0 0.85 0 0 0</pose><geometry><sphere><radius>0.06</radius></sphere></geometry>
+        <material><ambient>0 1 0 1</ambient><diffuse>0 1 0 1</diffuse><emissive>0 0.7 0 1</emissive></material>
+      </visual>
+    </link></model>
+
+  <model name="sign_shop_3"><static>true</static><pose>9.5 -3.7 0 0 0 0</pose>
+    <link name="l">
+      <collision name="c"><pose>0 0 1.0 0 0 0</pose><geometry><box><size>0.08 0.08 2.0</size></box></geometry></collision>
+      <visual name="pole"><pose>0 0 1.0 0 0 0</pose><geometry><box><size>0.08 0.08 2.0</size></box></geometry><material><ambient>0.3 0.3 0.3 1</ambient></material></visual>
+      <visual name="board"><pose>0 0 2.2 0 0 0</pose><geometry><box><size>0.05 0.9 0.4</size></box></geometry>
+        <material><ambient>0.9 0.7 0.0 1</ambient></material></visual>
+    </link></model>
+
+  <!-- ═══ DOCK STATION OVERHEAD LIGHTS — bright downward spots on each AGV ═══ -->
+  <!-- Fixture model (grey box on ceiling) + intense spot for each dock -->
+  <model name="dock_fixture_1"><static>true</static><pose>-6 -8.8 4.5 0 0 0</pose>
+    <link name="l"><visual name="v"><geometry><box><size>0.3 0.3 0.1</size></box></geometry>
+      <material><ambient>0.9 0.9 0.9 1</ambient><diffuse>0.9 0.9 0.9 1</diffuse><emissive>1.0 1.0 0.85 1</emissive></material>
+    </visual></link></model>
+  <model name="dock_fixture_2"><static>true</static><pose> 0 -8.8 4.5 0 0 0</pose>
+    <link name="l"><visual name="v"><geometry><box><size>0.3 0.3 0.1</size></box></geometry>
+      <material><ambient>0.9 0.9 0.9 1</ambient><diffuse>0.9 0.9 0.9 1</diffuse><emissive>1.0 1.0 0.85 1</emissive></material>
+    </visual></link></model>
+  <model name="dock_fixture_3"><static>true</static><pose> 6 -8.8 4.5 0 0 0</pose>
+    <link name="l"><visual name="v"><geometry><box><size>0.3 0.3 0.1</size></box></geometry>
+      <material><ambient>0.9 0.9 0.9 1</ambient><diffuse>0.9 0.9 0.9 1</diffuse><emissive>1.0 1.0 0.85 1</emissive></material>
+    </visual></link></model>
+  <light name="dock_spot_1" type="spot"><pose>-6 -8.8 4.4 0 0 0</pose><diffuse>1.0 1.0 0.85 1</diffuse><specular>0.3 0.3 0.3 1</specular><direction>0 0 -1</direction><spot><inner_angle>0.4</inner_angle><outer_angle>0.7</outer_angle><falloff>2.0</falloff></spot><attenuation><range>8</range><linear>0.05</linear><constant>0.1</constant><quadratic>0.01</quadratic></attenuation><cast_shadows>false</cast_shadows></light>
+  <light name="dock_spot_2" type="spot"><pose> 0 -8.8 4.4 0 0 0</pose><diffuse>1.0 1.0 0.85 1</diffuse><specular>0.3 0.3 0.3 1</specular><direction>0 0 -1</direction><spot><inner_angle>0.4</inner_angle><outer_angle>0.7</outer_angle><falloff>2.0</falloff></spot><attenuation><range>8</range><linear>0.05</linear><constant>0.1</constant><quadratic>0.01</quadratic></attenuation><cast_shadows>false</cast_shadows></light>
+  <light name="dock_spot_3" type="spot"><pose> 6 -8.8 4.4 0 0 0</pose><diffuse>1.0 1.0 0.85 1</diffuse><specular>0.3 0.3 0.3 1</specular><direction>0 0 -1</direction><spot><inner_angle>0.4</inner_angle><outer_angle>0.7</outer_angle><falloff>2.0</falloff></spot><attenuation><range>8</range><linear>0.05</linear><constant>0.1</constant><quadratic>0.01</quadratic></attenuation><cast_shadows>false</cast_shadows></light>
+
+
+</world>
+</sdf>

@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<sdf version="1.7">
+  <model name="pallet">
+    <static>false</static>
+    <link name="link">
+      <inertial>
+        <mass>15.0</mass>
+        <inertia><ixx>0.5</ixx><ixy>0</ixy><ixz>0</ixz><iyy>0.8</iyy><iyz>0</iyz><izz>1.2</izz></inertia>
+      </inertial>
+
+      <!-- Top deck boards -->
+      <collision name="top_deck"><pose>0 0 0.07 0 0 0</pose><geometry><box><size>1.20 0.80 0.02</size></box></geometry></collision>
+      <visual name="top_deck">
+        <pose>0 0 0.07 0 0 0</pose>
+        <geometry><box><size>1.20 0.80 0.022</size></box></geometry>
+        <material><ambient>0.55 0.35 0.15 1</ambient><diffuse>0.55 0.35 0.15 1</diffuse></material>
+      </visual>
+
+      <!-- Three support blocks -->
+      <collision name="block_l"><pose>-0.44 0 0.035 0 0 0</pose><geometry><box><size>0.10 0.80 0.07</size></box></geometry></collision>
+      <visual name="block_l"><pose>-0.44 0 0.035 0 0 0</pose><geometry><box><size>0.10 0.80 0.07</size></box></geometry><material><ambient>0.45 0.28 0.10 1</ambient></material></visual>
+
+      <collision name="block_c"><pose>0 0 0.035 0 0 0</pose><geometry><box><size>0.10 0.80 0.07</size></box></geometry></collision>
+      <visual name="block_c"><pose>0 0 0.035 0 0 0</pose><geometry><box><size>0.10 0.80 0.07</size></box></geometry><material><ambient>0.45 0.28 0.10 1</ambient></material></visual>
+
+      <collision name="block_r"><pose>0.44 0 0.035 0 0 0</pose><geometry><box><size>0.10 0.80 0.07</size></box></geometry></collision>
+      <visual name="block_r"><pose>0.44 0 0.035 0 0 0</pose><geometry><box><size>0.10 0.80 0.07</size></box></geometry><material><ambient>0.45 0.28 0.10 1</ambient></material></visual>
+
+      <!-- Bottom boards -->
+      <collision name="bottom_deck"><pose>0 0 0 0 0 0</pose><geometry><box><size>1.20 0.80 0.015</size></box></geometry></collision>
+      <visual name="bottom_deck">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry><box><size>1.20 0.80 0.015</size></box></geometry>
+        <material><ambient>0.50 0.32 0.12 1</ambient></material>
+      </visual>
+    </link>
+  </model>
+</sdf>

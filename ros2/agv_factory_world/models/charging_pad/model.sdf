@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<sdf version="1.7">
+  <model name="charging_pad">
+    <static>true</static>
+    <link name="link">
+      <!-- Pad body flush with floor -->
+      <collision name="pad_col"><pose>0 0 0.005 0 0 0</pose><geometry><box><size>0.5 0.5 0.01</size></box></geometry></collision>
+      <visual name="pad_body">
+        <pose>0 0 0.005 0 0 0</pose>
+        <geometry><box><size>0.5 0.5 0.01</size></box></geometry>
+        <material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0.05 0.05 0.05 1</diffuse></material>
+      </visual>
+      <!-- Coil ring marking (cyan) -->
+      <visual name="ring_outer">
+        <pose>0 0 0.011 0 0 0</pose>
+        <geometry><cylinder><radius>0.22</radius><length>0.002</length></cylinder></geometry>
+        <material><ambient>0.0 0.8 0.8 0.6</ambient><diffuse>0.0 0.8 0.8 0.6</diffuse></material>
+      </visual>
+      <visual name="ring_inner">
+        <pose>0 0 0.011 0 0 0</pose>
+        <geometry><cylinder><radius>0.14</radius><length>0.002</length></cylinder></geometry>
+        <material><ambient>0.0 0.5 0.5 0.6</ambient></material>
+      </visual>
+      <!-- Centre dot -->
+      <visual name="centre">
+        <pose>0 0 0.012 0 0 0</pose>
+        <geometry><cylinder><radius>0.03</radius><length>0.002</length></cylinder></geometry>
+        <material><ambient>0.0 1.0 1.0 1</ambient><emissive>0.0 0.5 0.5 1</emissive></material>
+      </visual>
+    </link>
+  </model>
+</sdf>

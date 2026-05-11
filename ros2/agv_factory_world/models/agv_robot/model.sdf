@@ -1,0 +1,282 @@
+<?xml version="1.0"?>
+<sdf version="1.7">
+  <model name="agv_robot">
+    <static>false</static>
+
+    <!-- ═══ CHASSIS ════════════════════════════════════════════════════ -->
+    <link name="base_link">
+      <pose>0 0 0.12 0 0 0</pose>
+      <inertial>
+        <mass>15.0</mass>
+        <inertia>
+          <ixx>0.4</ixx><ixy>0</ixy><ixz>0</ixz>
+          <iyy>0.6</iyy><iyz>0</iyz>
+          <izz>0.8</izz>
+        </inertia>
+      </inertial>
+      <!-- Main body — blue box -->
+      <collision name="chassis_col">
+        <geometry><box><size>0.55 0.38 0.10</size></box></geometry>
+      </collision>
+      <visual name="chassis_vis">
+        <geometry><box><size>0.55 0.38 0.10</size></box></geometry>
+        <material>
+          <ambient>0.05 0.15 0.7 1</ambient>
+          <diffuse>0.05 0.15 0.7 1</diffuse>
+        </material>
+      </visual>
+      <!-- Yellow top plate -->
+      <visual name="top_plate">
+        <pose>0 0 0.06 0 0 0</pose>
+        <geometry><box><size>0.50 0.34 0.02</size></box></geometry>
+        <material>
+          <ambient>0.95 0.75 0.0 1</ambient>
+          <diffuse>0.95 0.75 0.0 1</diffuse>
+          <emissive>0.3 0.2 0.0 1</emissive>
+        </material>
+      </visual>
+      <!-- Black front bumper -->
+      <visual name="bumper_front">
+        <pose>0.285 0 0 0 0 0</pose>
+        <geometry><box><size>0.02 0.40 0.08</size></box></geometry>
+        <material><ambient>0.1 0.1 0.1 1</ambient></material>
+      </visual>
+      <!-- Arrow indicator on top (white strip pointing forward) -->
+      <visual name="arrow">
+        <pose>0.10 0 0.071 0 0 0</pose>
+        <geometry><box><size>0.20 0.04 0.005</size></box></geometry>
+        <material>
+          <ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse>
+          <emissive>0.5 0.5 0.5 1</emissive>
+        </material>
+      </visual>
+    </link>
+
+    <!-- ═══ FRONT-LEFT WHEEL ══════════════════════════════════════════ -->
+    <!-- Pose: x=+0.18 (front), y=+0.21 (left), z=0.07 (wheel radius)  -->
+    <!-- Roll -90° so positive DiffDrive commands roll the robot forward. -->
+    <link name="wheel_fl">
+      <pose>0.18 0.22 0.07 -1.5708 0 0</pose>
+      <inertial>
+        <mass>1.5</mass>
+        <inertia><ixx>0.003</ixx><ixy>0</ixy><ixz>0</ixz>
+                 <iyy>0.003</iyy><iyz>0</iyz><izz>0.005</izz></inertia>
+      </inertial>
+      <collision name="col">
+        <geometry><cylinder><radius>0.07</radius><length>0.055</length></cylinder></geometry>
+        <surface><friction><ode><mu>1.5</mu><mu2>1.5</mu2></ode></friction></surface>
+      </collision>
+      <!-- Tyre — dark grey -->
+      <visual name="tyre">
+        <geometry><cylinder><radius>0.07</radius><length>0.055</length></cylinder></geometry>
+        <material><ambient>0.12 0.12 0.12 1</ambient><diffuse>0.12 0.12 0.12 1</diffuse></material>
+      </visual>
+      <!-- Orange marker half — rotation indicator -->
+      <visual name="marker_a">
+        <pose>0 0 0.001 0 0 0</pose>
+        <geometry><box><size>0.072 0.058 0.002</size></box></geometry>
+        <material><ambient>1.0 0.45 0.0 1</ambient><diffuse>1.0 0.45 0.0 1</diffuse><emissive>0.4 0.2 0.0 1</emissive></material>
+      </visual>
+      <!-- White marker strip perpendicular -->
+      <visual name="marker_b">
+        <pose>0 0 0.001 0 0 1.5708</pose>
+        <geometry><box><size>0.072 0.015 0.003</size></box></geometry>
+        <material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><emissive>0.5 0.5 0.5 1</emissive></material>
+      </visual>
+    </link>
+    <joint name="joint_wheel_fl" type="revolute">
+      <parent>base_link</parent><child>wheel_fl</child>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit><lower>-1e16</lower><upper>1e16</upper></limit>
+        <dynamics><damping>0.01</damping><friction>0.01</friction></dynamics>
+      </axis>
+    </joint>
+
+    <!-- ═══ FRONT-RIGHT WHEEL ═════════════════════════════════════════ -->
+    <link name="wheel_fr">
+      <pose>0.18 -0.22 0.07 -1.5708 0 0</pose>
+      <inertial>
+        <mass>1.5</mass>
+        <inertia><ixx>0.003</ixx><ixy>0</ixy><ixz>0</ixz>
+                 <iyy>0.003</iyy><iyz>0</iyz><izz>0.005</izz></inertia>
+      </inertial>
+      <collision name="col">
+        <geometry><cylinder><radius>0.07</radius><length>0.055</length></cylinder></geometry>
+        <surface><friction><ode><mu>1.5</mu><mu2>1.5</mu2></ode></friction></surface>
+      </collision>
+      <visual name="tyre">
+        <geometry><cylinder><radius>0.07</radius><length>0.055</length></cylinder></geometry>
+        <material><ambient>0.12 0.12 0.12 1</ambient><diffuse>0.12 0.12 0.12 1</diffuse></material>
+      </visual>
+      <visual name="marker_a">
+        <pose>0 0 0.001 0 0 0</pose>
+        <geometry><box><size>0.072 0.058 0.002</size></box></geometry>
+        <material><ambient>1.0 0.45 0.0 1</ambient><diffuse>1.0 0.45 0.0 1</diffuse><emissive>0.4 0.2 0.0 1</emissive></material>
+      </visual>
+      <visual name="marker_b">
+        <pose>0 0 0.001 0 0 1.5708</pose>
+        <geometry><box><size>0.072 0.015 0.003</size></box></geometry>
+        <material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><emissive>0.5 0.5 0.5 1</emissive></material>
+      </visual>
+    </link>
+    <joint name="joint_wheel_fr" type="revolute">
+      <parent>base_link</parent><child>wheel_fr</child>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit><lower>-1e16</lower><upper>1e16</upper></limit>
+        <dynamics><damping>0.01</damping><friction>0.01</friction></dynamics>
+      </axis>
+    </joint>
+
+    <!-- ═══ REAR-LEFT WHEEL (passive) ════════════════════════════════ -->
+    <link name="wheel_rl">
+      <pose>-0.18 0.22 0.07 -1.5708 0 0</pose>
+      <inertial>
+        <mass>1.5</mass>
+        <inertia><ixx>0.003</ixx><ixy>0</ixy><ixz>0</ixz>
+                 <iyy>0.003</iyy><iyz>0</iyz><izz>0.005</izz></inertia>
+      </inertial>
+      <collision name="col">
+        <geometry><cylinder><radius>0.07</radius><length>0.055</length></cylinder></geometry>
+        <surface><friction><ode><mu>1.5</mu><mu2>1.5</mu2></ode></friction></surface>
+      </collision>
+      <visual name="tyre">
+        <geometry><cylinder><radius>0.07</radius><length>0.055</length></cylinder></geometry>
+        <material><ambient>0.12 0.12 0.12 1</ambient><diffuse>0.12 0.12 0.12 1</diffuse></material>
+      </visual>
+      <visual name="marker_a">
+        <pose>0 0 0.001 0 0 0</pose>
+        <geometry><box><size>0.072 0.058 0.002</size></box></geometry>
+        <material><ambient>1.0 0.45 0.0 1</ambient><diffuse>1.0 0.45 0.0 1</diffuse><emissive>0.4 0.2 0.0 1</emissive></material>
+      </visual>
+      <visual name="marker_b">
+        <pose>0 0 0.001 0 0 1.5708</pose>
+        <geometry><box><size>0.072 0.015 0.003</size></box></geometry>
+        <material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><emissive>0.5 0.5 0.5 1</emissive></material>
+      </visual>
+    </link>
+    <joint name="joint_wheel_rl" type="revolute">
+      <parent>base_link</parent><child>wheel_rl</child>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit><lower>-1e16</lower><upper>1e16</upper></limit>
+        <dynamics><damping>0.01</damping><friction>0.01</friction></dynamics>
+      </axis>
+    </joint>
+
+    <!-- ═══ REAR-RIGHT WHEEL (passive) ═══════════════════════════════ -->
+    <link name="wheel_rr">
+      <pose>-0.18 -0.22 0.07 -1.5708 0 0</pose>
+      <inertial>
+        <mass>1.5</mass>
+        <inertia><ixx>0.003</ixx><ixy>0</ixy><ixz>0</ixz>
+                 <iyy>0.003</iyy><iyz>0</iyz><izz>0.005</izz></inertia>
+      </inertial>
+      <collision name="col">
+        <geometry><cylinder><radius>0.07</radius><length>0.055</length></cylinder></geometry>
+        <surface><friction><ode><mu>1.5</mu><mu2>1.5</mu2></ode></friction></surface>
+      </collision>
+      <visual name="tyre">
+        <geometry><cylinder><radius>0.07</radius><length>0.055</length></cylinder></geometry>
+        <material><ambient>0.12 0.12 0.12 1</ambient><diffuse>0.12 0.12 0.12 1</diffuse></material>
+      </visual>
+      <visual name="marker_a">
+        <pose>0 0 0.001 0 0 0</pose>
+        <geometry><box><size>0.072 0.058 0.002</size></box></geometry>
+        <material><ambient>1.0 0.45 0.0 1</ambient><diffuse>1.0 0.45 0.0 1</diffuse><emissive>0.4 0.2 0.0 1</emissive></material>
+      </visual>
+      <visual name="marker_b">
+        <pose>0 0 0.001 0 0 1.5708</pose>
+        <geometry><box><size>0.072 0.015 0.003</size></box></geometry>
+        <material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><emissive>0.5 0.5 0.5 1</emissive></material>
+      </visual>
+    </link>
+    <joint name="joint_wheel_rr" type="revolute">
+      <parent>base_link</parent><child>wheel_rr</child>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit><lower>-1e16</lower><upper>1e16</upper></limit>
+        <dynamics><damping>0.01</damping><friction>0.01</friction></dynamics>
+      </axis>
+    </joint>
+
+    <!-- ═══ IR SENSOR BAR (5-LED array, front underside, facing floor) ══ -->
+    <link name="ir_bar">
+      <pose>0.24 0 0.015 0 0 0</pose>
+      <inertial><mass>0.02</mass>
+        <inertia><ixx>0.00001</ixx><ixy>0</ixy><ixz>0</ixz>
+                 <iyy>0.00001</iyy><iyz>0</iyz><izz>0.00001</izz></inertia>
+      </inertial>
+      <!-- PCB bar -->
+      <visual name="pcb">
+        <geometry><box><size>0.04 0.18 0.008</size></box></geometry>
+        <material><ambient>0.1 0.4 0.1 1</ambient><diffuse>0.1 0.4 0.1 1</diffuse></material>
+      </visual>
+      <!-- LED 1 -->
+      <visual name="led1"><pose>0 -0.07 -0.005 0 0 0</pose>
+        <geometry><sphere><radius>0.007</radius></sphere></geometry>
+        <material><ambient>1 0 0 1</ambient><emissive>0.8 0 0 1</emissive></material></visual>
+      <!-- LED 2 -->
+      <visual name="led2"><pose>0 -0.035 -0.005 0 0 0</pose>
+        <geometry><sphere><radius>0.007</radius></sphere></geometry>
+        <material><ambient>1 0 0 1</ambient><emissive>0.8 0 0 1</emissive></material></visual>
+      <!-- LED 3 centre -->
+      <visual name="led3"><pose>0 0 -0.005 0 0 0</pose>
+        <geometry><sphere><radius>0.007</radius></sphere></geometry>
+        <material><ambient>1 0.5 0 1</ambient><emissive>0.8 0.4 0 1</emissive></material></visual>
+      <!-- LED 4 -->
+      <visual name="led4"><pose>0 0.035 -0.005 0 0 0</pose>
+        <geometry><sphere><radius>0.007</radius></sphere></geometry>
+        <material><ambient>1 0 0 1</ambient><emissive>0.8 0 0 1</emissive></material></visual>
+      <!-- LED 5 -->
+      <visual name="led5"><pose>0 0.07 -0.005 0 0 0</pose>
+        <geometry><sphere><radius>0.007</radius></sphere></geometry>
+        <material><ambient>1 0 0 1</ambient><emissive>0.8 0 0 1</emissive></material></visual>
+    </link>
+    <joint name="ir_bar_joint" type="fixed">
+      <parent>base_link</parent><child>ir_bar</child>
+    </joint>
+
+    <!-- ═══ STATUS BEACON (green emissive sphere on top) ══════════════ -->
+    <link name="beacon">
+      <pose>0 0 0.22 0 0 0</pose>
+      <inertial><mass>0.05</mass>
+        <inertia><ixx>0.00001</ixx><ixy>0</ixy><ixz>0</ixz>
+                 <iyy>0.00001</iyy><iyz>0</iyz><izz>0.00001</izz></inertia>
+      </inertial>
+      <visual name="vis">
+        <geometry><sphere><radius>0.03</radius></sphere></geometry>
+        <material>
+          <ambient>0.0 1.0 0.0 1</ambient>
+          <diffuse>0.0 1.0 0.0 1</diffuse>
+          <emissive>0.0 0.9 0.0 1</emissive>
+        </material>
+      </visual>
+    </link>
+    <joint name="beacon_joint" type="fixed">
+      <parent>base_link</parent><child>beacon</child>
+    </joint>
+
+    <!-- ═══ DIFF-DRIVE PLUGIN (Ignition Gazebo 6) ═════════════════════
+         Uses front-left and front-right as drive wheels.
+         Rear wheels spin freely due to ground friction.
+         topic matches ros_gz_bridge argument exactly.
+    ══════════════════════════════════════════════════════════════════ -->
+    <plugin filename="ignition-gazebo-diff-drive-system"
+            name="ignition::gazebo::systems::DiffDrive">
+      <left_joint>joint_wheel_fl</left_joint>
+      <right_joint>joint_wheel_fr</right_joint>
+      <wheel_separation>0.44</wheel_separation>
+      <wheel_radius>0.07</wheel_radius>
+      <odom_publish_frequency>20</odom_publish_frequency>
+      <frame_id>odom</frame_id>
+      <child_frame_id>base_link</child_frame_id>
+      <max_linear_acceleration>2.0</max_linear_acceleration>
+      <max_angular_acceleration>2.0</max_angular_acceleration>
+      <min_velocity>-2.0</min_velocity>
+      <max_velocity>2.0</max_velocity>
+    </plugin>
+
+  </model>
+</sdf>

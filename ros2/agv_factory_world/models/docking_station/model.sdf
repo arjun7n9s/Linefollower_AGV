@@ -1,0 +1,77 @@
+<?xml version="1.0"?>
+<sdf version="1.7">
+  <model name="docking_station">
+    <static>true</static>
+    <link name="link">
+      <!-- Base platform -->
+      <collision name="base_col"><pose>0 0 0.025 0 0 0</pose><geometry><box><size>1.0 0.7 0.05</size></box></geometry></collision>
+      <visual name="base">
+        <pose>0 0 0.025 0 0 0</pose>
+        <geometry><box><size>1.0 0.7 0.05</size></box></geometry>
+        <material><ambient>0.15 0.15 0.15 1</ambient><diffuse>0.15 0.15 0.15 1</diffuse></material>
+      </visual>
+
+      <!-- Back wall / housing -->
+      <collision name="back_wall_col"><pose>-0.46 0 0.20 0 0 0</pose><geometry><box><size>0.08 0.7 0.40</size></box></geometry></collision>
+      <visual name="back_wall">
+        <pose>-0.46 0 0.20 0 0 0</pose>
+        <geometry><box><size>0.08 0.7 0.40</size></box></geometry>
+        <material><ambient>0.2 0.2 0.2 1</ambient><diffuse>0.2 0.2 0.2 1</diffuse></material>
+      </visual>
+
+      <!-- Side guide rails (left) -->
+      <collision name="rail_left_col"><pose>0 0.32 0.06 0 0 0</pose><geometry><box><size>0.9 0.06 0.07</size></box></geometry></collision>
+      <visual name="rail_left">
+        <pose>0 0.32 0.06 0 0 0</pose>
+        <geometry><box><size>0.9 0.06 0.07</size></box></geometry>
+        <material><ambient>0.8 0.4 0.0 1</ambient><diffuse>0.8 0.4 0.0 1</diffuse></material>
+      </visual>
+
+      <!-- Side guide rails (right) -->
+      <collision name="rail_right_col"><pose>0 -0.32 0.06 0 0 0</pose><geometry><box><size>0.9 0.06 0.07</size></box></geometry></collision>
+      <visual name="rail_right">
+        <pose>0 -0.32 0.06 0 0 0</pose>
+        <geometry><box><size>0.9 0.06 0.07</size></box></geometry>
+        <material><ambient>0.8 0.4 0.0 1</ambient><diffuse>0.8 0.4 0.0 1</diffuse></material>
+      </visual>
+
+      <!-- Charging contact pads -->
+      <visual name="contact_pad_l">
+        <pose>-0.42 0.1 0.051 0 0 0</pose>
+        <geometry><box><size>0.06 0.04 0.005</size></box></geometry>
+        <material><ambient>0.9 0.9 0.0 1</ambient><diffuse>0.9 0.9 0.0 1</diffuse></material>
+      </visual>
+      <visual name="contact_pad_r">
+        <pose>-0.42 -0.1 0.051 0 0 0</pose>
+        <geometry><box><size>0.06 0.04 0.005</size></box></geometry>
+        <material><ambient>0.9 0.9 0.0 1</ambient><diffuse>0.9 0.9 0.0 1</diffuse></material>
+      </visual>
+
+      <!-- Alignment arrow marking on floor -->
+      <visual name="arrow_shaft">
+        <pose>0.1 0 0.051 0 0 0</pose>
+        <geometry><box><size>0.50 0.04 0.002</size></box></geometry>
+        <material><ambient>1.0 1.0 1.0 1</ambient></material>
+      </visual>
+      <visual name="arrow_head">
+        <pose>-0.17 0 0.051 0 0 0.785</pose>
+        <geometry><box><size>0.12 0.04 0.002</size></box></geometry>
+        <material><ambient>1.0 1.0 1.0 1</ambient></material>
+      </visual>
+
+      <!-- Status LED (green = available) -->
+      <visual name="status_led">
+        <pose>-0.43 0 0.42 0 0 0</pose>
+        <geometry><sphere><radius>0.025</radius></sphere></geometry>
+        <material><ambient>0 1 0 1</ambient><diffuse>0 1 0 1</diffuse><emissive>0 0.8 0 1</emissive></material>
+      </visual>
+
+      <!-- Label sign -->
+      <visual name="label_plate">
+        <pose>-0.43 0 0.32 0 0 0</pose>
+        <geometry><box><size>0.02 0.3 0.08</size></box></geometry>
+        <material><ambient>0.0 0.3 0.8 1</ambient></material>
+      </visual>
+    </link>
+  </model>
+</sdf>
