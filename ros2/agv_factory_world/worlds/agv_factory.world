@@ -77,7 +77,7 @@
 
        NODE MAP:
          DOCK_1(-6,-8.8)  DOCK_2(0,-8.8)  DOCK_3(6,-8.8)
-         J_SW(-6,-5)  J_SC(0,-5)  J_SE(6,-5)      ← south junction row
+         J_SW(-6,-5)  J_SC(0,-5)  J_SE(6,-5)      ← dock merge points only
          J_WS(-12,-5) ←─ south horizontal extends west
          J_ES( 12,-5) ←─ south horizontal extends east
          J_WN(-12, 5) ←─ north horizontal left end
@@ -106,7 +106,13 @@
            J_NE(6,5) ↔ J_SHOP_N(8,5)
            J_SE(6,-5) ↔ J_SHOP_S(8,-5)
          Mid cross connector (yellow, y=0 x=-12..8):
-           J_WS_mid(-12,0) ↔ J_SHOP_M(8,0)
+           J_WM(-12,0) ↔ J_SHOP_M(8,0)
+
+       IMPORTANT:
+         There are intentionally NO vertical routes at x=-6, x=0, or x=6
+         between y=-5 and y=+5. Those would cut through the work area.
+         Robots must merge onto the south row, then use the west/east
+         perimeter spines or the shop spine.
   ═══════════════════════════════════════════════════════════════ -->
 
   <!-- ── DOCK APPROACH LANES (white, one per AGV) ──────────────────── -->

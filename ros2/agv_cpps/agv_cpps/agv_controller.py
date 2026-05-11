@@ -29,6 +29,7 @@ import math
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
+from nav_msgs.msg import Odometry
 from std_msgs.msg import Header, String
 from agv_interfaces.msg import AGVStatus, ReplenishmentOrder
 
@@ -40,6 +41,9 @@ UNLOAD_TIME_SEC = 4.0
 CTRL_DT         = 0.05   # 20 Hz control loop
 LINE_HALF_WIDTH = 0.18   # metres — IR sensor detects line within this band
 KP_LINE         = 1.2    # P-gain for line-follow cross-track correction
+KP_HEADING      = 1.8    # P-gain for heading-to-next-node correction
+GOAL_TOLERANCE  = 0.28   # metres
+INITIAL_YAW     = math.pi / 2
 
 # ── Home docks ────────────────────────────────────────────────────────
 DOCK_HOME = {
@@ -111,18 +115,18 @@ GRAPH = {
     "dock_1":   ["j_sw"],
     "dock_2":   ["j_sc"],
     "dock_3":   ["j_se"],
-    "j_sw":     ["dock_1","j_sc","j_ws","j_nw"],
-    "j_sc":     ["dock_2","j_sw","j_se","j_nc"],
-    "j_se":     ["dock_3","j_sc","j_es","j_shop_s","j_ne"],
+    "j_sw":     ["dock_1","j_sc","j_ws"],
+    "j_sc":     ["dock_2","j_sw","j_se"],
+    "j_se":     ["dock_3","j_sc","j_es","j_shop_s"],
     "j_ws":     ["j_sw","j_es","j_wm"],
     "j_es":     ["j_se","j_ws","j_em","j_shop_s"],
     "j_wm":     ["j_ws","j_wn","j_shop_m","depot_c"],
-    "j_em":     ["j_es","j_en","j_shop_m"],
-    "j_shop_m": ["j_wm","j_em","j_shop_n","j_shop_s","shop_2"],
+    "j_em":     ["j_es","j_en"],
+    "j_shop_m": ["j_wm","j_shop_n","j_shop_s","shop_2"],
     "j_wn":     ["j_wm","j_nw","depot_a"],
-    "j_nw":     ["j_sw","j_wn","j_nc"],
-    "j_nc":     ["j_sc","j_nw","j_ne"],
-    "j_ne":     ["j_se","j_nc","j_en","j_shop_n"],
+    "j_nw":     ["j_wn","j_nc"],
+    "j_nc":     ["j_nw","j_ne"],
+    "j_ne":     ["j_nc","j_en","j_shop_n"],
     "j_en":     ["j_ne","j_em","depot_b"],
     "j_shop_n": ["j_ne","j_shop_m","shop_1"],
     "j_shop_s": ["j_se","j_es","j_shop_m","shop_3"],
@@ -199,6 +203,16 @@ def _on_any_line(px, py) -> bool:
     return False
 
 
+def _clamp(value: float, low: float, high: float) -> float:
+    return max(low, min(high, value))
+
+
+def _yaw_from_quaternion(q) -> float:
+    siny_cosp = 2.0 * (q.w * q.z + q.x * q.y)
+    cosy_cosp = 1.0 - 2.0 * (q.y * q.y + q.z * q.z)
+    return math.atan2(siny_cosp, cosy_cosp)
+
+
 class AGVController(Node):
     def __init__(self):
         super().__init__("agv_controller")
@@ -212,11 +226,6 @@ class AGVController(Node):
 
         # Navigation
         self._path: list[str] = []    # remaining node names to visit
-        self._leg_elapsed  = 0.0
-        self._leg_duration = 0.0
-        self._turning      = False
-        self._turn_elapsed = 0.0
-        self._turn_dir     = 1.0
 
         # Wait timer
         self._wait_elapsed  = 0.0
@@ -227,7 +236,8 @@ class AGVController(Node):
         hx, hy = DOCK_HOME[self._agv_id]
         self._x   = hx
         self._y   = hy
-        self._yaw = math.pi / 2   # initially facing north (+Y)
+        self._yaw = INITIAL_YAW   # initially facing north (+Y)
+        self._have_odom = False
 
         # Current leg start (for cross-track error)
         self._leg_start_x = hx
@@ -241,6 +251,7 @@ class AGVController(Node):
         self._done_pub   = self.create_publisher(ReplenishmentOrder, "/orders/completed", 10)
 
         self.create_subscription(ReplenishmentOrder, f"/{self._agv_id}/task", self._on_task, 10)
+        self.create_subscription(Odometry, f"/model/{self._agv_id}/odometry", self._on_odom, 20)
 
         self.create_timer(CTRL_DT, self._control_loop)
         self.create_timer(0.5,     self._publish_status)
@@ -257,6 +268,21 @@ class AGVController(Node):
             f"{self._agv_id}: task order={msg.order_id} mat={msg.material_type} → {msg.shop_id}"
         )
         self._begin_going_to_depot()
+
+    def _on_odom(self, msg: Odometry):
+        """Convert model-local diff-drive odometry into the factory world frame."""
+        hx, hy = DOCK_HOME[self._agv_id]
+        ox = msg.pose.pose.position.x
+        oy = msg.pose.pose.position.y
+        cy = math.cos(INITIAL_YAW)
+        sy = math.sin(INITIAL_YAW)
+        self._x = hx + ox * cy - oy * sy
+        self._y = hy + ox * sy + oy * cy
+        self._yaw = math.atan2(
+            math.sin(INITIAL_YAW + _yaw_from_quaternion(msg.pose.pose.orientation)),
+            math.cos(INITIAL_YAW + _yaw_from_quaternion(msg.pose.pose.orientation)),
+        )
+        self._have_odom = True
 
     # ── Transitions ───────────────────────────────────────────────────
     def _begin_going_to_depot(self):
@@ -322,24 +348,8 @@ class AGVController(Node):
     def _advance_to_next_node(self):
         if not self._path:
             return
-        gx, gy = NODES[self._path[0]]
-        dist = math.hypot(gx - self._x, gy - self._y)
-        target_yaw = math.atan2(gy - self._y, gx - self._x)
-        angle_err  = math.atan2(
-            math.sin(target_yaw - self._yaw),
-            math.cos(target_yaw - self._yaw),
-        )
         self._leg_start_x = self._x
         self._leg_start_y = self._y
-        if abs(angle_err) > 0.12:
-            self._turning      = True
-            self._turn_elapsed = 0.0
-            self._turn_dir     = 1.0 if angle_err > 0 else -1.0
-        else:
-            self._turning = False
-        self._yaw          = target_yaw
-        self._leg_elapsed  = 0.0
-        self._leg_duration = (dist / LINEAR_SPEED) if dist > 0.05 else 0.0
 
     # ── Main control loop (20 Hz) ─────────────────────────────────────
     def _control_loop(self):
@@ -373,43 +383,33 @@ class AGVController(Node):
                 self._set_idle()
             return
 
-        # ── Turning phase ──
-        if self._turning:
-            self._turn_elapsed += CTRL_DT
-            twist = Twist()
-            twist.angular.z = ANGULAR_SPEED * self._turn_dir
-            twist.linear.x  = 0.04
-            self._cmd_pub.publish(twist)
-            turn_time = abs(math.atan2(
-                math.sin(self._yaw - math.atan2(
-                    NODES[self._path[0]][1] - self._leg_start_y,
-                    NODES[self._path[0]][0] - self._leg_start_x)),
-                math.cos(self._yaw - math.atan2(
-                    NODES[self._path[0]][1] - self._leg_start_y,
-                    NODES[self._path[0]][0] - self._leg_start_x))
-            )) / ANGULAR_SPEED + 0.3
-            if self._turn_elapsed >= turn_time:
-                self._turning = False
-                self._leg_elapsed = 0.0
-            return
-
-        # ── Driving phase with line-follow P-controller ──
-        self._leg_elapsed += CTRL_DT
-
-        # Dead-reckoning position update
-        self._x += LINEAR_SPEED * CTRL_DT * math.cos(self._yaw)
-        self._y += LINEAR_SPEED * CTRL_DT * math.sin(self._yaw)
-
-        # Cross-track error → P correction
+        # ── Drive toward next graph node using real odometry pose ──
         gx, gy = NODES[self._path[0]]
+        dist_to_goal = math.hypot(gx - self._x, gy - self._y)
+        target_yaw = math.atan2(gy - self._y, gx - self._x)
+        heading_err = math.atan2(
+            math.sin(target_yaw - self._yaw),
+            math.cos(target_yaw - self._yaw),
+        )
+
+        # If odometry is late, keep a minimal fallback so startup doesn't stall.
+        if not self._have_odom:
+            self._x += LINEAR_SPEED * CTRL_DT * math.cos(self._yaw)
+            self._y += LINEAR_SPEED * CTRL_DT * math.sin(self._yaw)
+
         cte = _cross_track_error(
             self._x, self._y,
             self._leg_start_x, self._leg_start_y,
             gx, gy,
         )
-        angular_correction = -KP_LINE * cte
-        angular_correction = max(-1.0, min(1.0, angular_correction))
-        speed = LINEAR_SPEED * (1.0 - 0.4 * abs(angular_correction))
+        line_correction = -KP_LINE * cte
+        heading_correction = KP_HEADING * heading_err
+        angular_correction = _clamp(heading_correction + line_correction, -ANGULAR_SPEED, ANGULAR_SPEED)
+
+        if abs(heading_err) > 0.35:
+            speed = 0.0
+        else:
+            speed = LINEAR_SPEED * (1.0 - 0.55 * min(1.0, abs(angular_correction)))
 
         twist = Twist()
         twist.linear.x  = speed
@@ -417,10 +417,7 @@ class AGVController(Node):
         self._cmd_pub.publish(twist)
 
         # Check arrival at waypoint
-        dist_to_goal = math.hypot(gx - self._x, gy - self._y)
-        if self._leg_elapsed >= self._leg_duration or dist_to_goal < 0.25:
-            # Snap to node
-            self._x, self._y = gx, gy
+        if dist_to_goal < GOAL_TOLERANCE:
             self._stop()
             node_name = self._path.pop(0)
             self.get_logger().info(f"{self._agv_id}: reached {node_name}")
