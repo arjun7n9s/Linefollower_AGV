@@ -65,11 +65,13 @@
   <model name="wall_west"><static>true</static><pose>-15 0 2.5 0 0 0</pose>
     <link name="link"><collision name="col"><geometry><box><size>0.2 20 5</size></box></geometry></collision><visual name="vis"><geometry><box><size>0.2 20 5</size></box></geometry><material><ambient>0.8 0.78 0.72 1</ambient></material></visual></link></model>
 
-  <!-- Divider wall with 4 m central gap for AGVs -->
-  <model name="wall_div_w"><static>true</static><pose>-9 -6.5 1.5 0 0 0</pose>
-    <link name="link"><collision name="col"><geometry><box><size>12 0.15 3</size></box></geometry></collision><visual name="vis"><geometry><box><size>12 0.15 3</size></box></geometry><material><ambient>0.7 0.7 0.7 1</ambient></material></visual></link></model>
-  <model name="wall_div_e"><static>true</static><pose>9 -6.5 1.5 0 0 0</pose>
-    <link name="link"><collision name="col"><geometry><box><size>12 0.15 3</size></box></geometry></collision><visual name="vis"><geometry><box><size>12 0.15 3</size></box></geometry><material><ambient>0.7 0.7 0.7 1</ambient></material></visual></link></model>
+  <!-- Divider wall — 14m gap (x=-7 to +7) lets dock lanes at x=-6,0,+6 pass freely -->
+  <!-- wall_div_w: x=-15 to x=-7  (8m, centre x=-11) -->
+  <model name="wall_div_w"><static>true</static><pose>-11 -6.5 1.5 0 0 0</pose>
+    <link name="link"><collision name="col"><geometry><box><size>8 0.15 3</size></box></geometry></collision><visual name="vis"><geometry><box><size>8 0.15 3</size></box></geometry><material><ambient>0.7 0.7 0.7 1</ambient></material></visual></link></model>
+  <!-- wall_div_e: x=+7 to x=+15  (8m, centre x=+11) -->
+  <model name="wall_div_e"><static>true</static><pose>11 -6.5 1.5 0 0 0</pose>
+    <link name="link"><collision name="col"><geometry><box><size>8 0.15 3</size></box></geometry></collision><visual name="vis"><geometry><box><size>8 0.15 3</size></box></geometry><material><ambient>0.7 0.7 0.7 1</ambient></material></visual></link></model>
 
   <!-- ═══════════════════════════════════════════════════════════════
        AGV GUIDE LINE NETWORK  — all lines inside x=[-14,+14] y=[-9,+9]
@@ -182,6 +184,12 @@
       <material><ambient>1.0 0.9 0.0 1</ambient><diffuse>1.0 0.9 0.0 1</diffuse><emissive>0.6 0.55 0.0 1</emissive></material>
     </visual></link></model>
 
+  <!-- ── EAST-MID CONNECTOR (yellow, y=0, x=+8 to +12, length=4) ────── -->
+  <model name="line_east_mid"><static>true</static><pose>10 0 0.003 0 0 0</pose>
+    <link name="l"><visual name="v"><geometry><box><size>4 0.12 0.004</size></box></geometry>
+      <material><ambient>1.0 0.9 0.0 1</ambient><diffuse>1.0 0.9 0.0 1</diffuse><emissive>0.6 0.55 0.0 1</emissive></material>
+    </visual></link></model>
+
   <!-- ── SHOP SPINE (yellow, x=+8, y=-5 to +5, length=10) ─────────── -->
   <model name="line_shop_spine"><static>true</static><pose>8 0 0.003 0 0 0</pose>
     <link name="l"><visual name="v"><geometry><box><size>0.12 10 0.004</size></box></geometry>
@@ -206,9 +214,10 @@
   <include><uri>model://conveyor_belt</uri><name>conveyor_A</name><pose>-12 8.5 0 0 0 0</pose></include>
   <include><uri>model://conveyor_belt</uri><name>conveyor_B</name><pose> 12 8.5 0 0 0 0</pose></include>
 
-  <include><uri>model://drop_station</uri><name>drop_1</name><pose>-8 -4 0 0 0 0</pose></include>
-  <include><uri>model://drop_station</uri><name>drop_2</name><pose> 0 -4 0 0 0 0</pose></include>
-  <include><uri>model://drop_station</uri><name>drop_3</name><pose> 8 -4 0 0 0 0</pose></include>
+  <!-- Drop/shop stations on shop spine x=8, aligned with shop_1/2/3 controller nodes -->
+  <include><uri>model://drop_station</uri><name>drop_1</name><pose>8  5 0 0 0 0</pose></include>
+  <include><uri>model://drop_station</uri><name>drop_2</name><pose>8  0 0 0 0 0</pose></include>
+  <include><uri>model://drop_station</uri><name>drop_3</name><pose>8 -5 0 0 0 0</pose></include>
 
   <include><uri>model://docking_station</uri><name>dock_1</name><pose>-6 -9 0 0 0 1.5708</pose></include>
   <include><uri>model://docking_station</uri><name>dock_2</name><pose> 0 -9 0 0 0 1.5708</pose></include>
@@ -230,10 +239,10 @@
   <include><uri>model://carton_box</uri><name>carton_B2</name><pose> 12.0 8.5 0.44 0 0 0</pose></include>
   <include><uri>model://carton_box</uri><name>carton_B3</name><pose> 11.6 8.5 0.44 0 0 0</pose></include>
 
-  <!-- PALLETS at drop stations -->
-  <include><uri>model://pallet</uri><name>pallet_1</name><pose>-8 -4 0.001 0 0 0</pose></include>
-  <include><uri>model://pallet</uri><name>pallet_2</name><pose> 0 -4 0.001 0 0 0</pose></include>
-  <include><uri>model://pallet</uri><name>pallet_3</name><pose> 8 -4 0.001 0 0 0</pose></include>
+  <!-- PALLETS at shop spine drop stations -->
+  <include><uri>model://pallet</uri><name>pallet_1</name><pose>8  5 0.001 0 0 0</pose></include>
+  <include><uri>model://pallet</uri><name>pallet_2</name><pose>8  0 0.001 0 0 0</pose></include>
+  <include><uri>model://pallet</uri><name>pallet_3</name><pose>8 -5 0.001 0 0 0</pose></include>
 
   <!-- WALKING ACTORS (3 workers, looping waypoints) -->
   <actor name="worker_1">
@@ -244,11 +253,10 @@
       <loop>true</loop><auto_start>true</auto_start>
       <trajectory id="0" type="walking">
         <waypoint><time>0</time><pose>-12  7 1.0 0 0 -1.5708</pose></waypoint>
-        <waypoint><time>5</time><pose>-12  5 1.0 0 0 -1.5708</pose></waypoint>
-        <waypoint><time>12</time><pose>-8   5 1.0 0 0  0.0</pose></waypoint>
-        <waypoint><time>17</time><pose>-8  -4 1.0 0 0 -1.5708</pose></waypoint>
-        <waypoint><time>24</time><pose>-12 -4 1.0 0 0  3.1416</pose></waypoint>
-        <waypoint><time>30</time><pose>-12  7 1.0 0 0  1.5708</pose></waypoint>
+        <waypoint><time>6</time><pose>-12  5 1.0 0 0  0.0</pose></waypoint>
+        <waypoint><time>12</time><pose> -6  5 1.0 0 0  0.0</pose></waypoint>
+        <waypoint><time>18</time><pose> -6  7 1.0 0 0  1.5708</pose></waypoint>
+        <waypoint><time>24</time><pose>-12  7 1.0 0 0  3.1416</pose></waypoint>
       </trajectory>
     </script>
   </actor>
@@ -460,7 +468,7 @@
       </visual>
     </link></model>
 
-  <model name="sign_shop_3"><static>true</static><pose>9.5 -3.7 0 0 0 0</pose>
+  <model name="sign_shop_3"><static>true</static><pose>9.5 -4.0 0 0 0 0</pose>
     <link name="l">
       <collision name="c"><pose>0 0 1.0 0 0 0</pose><geometry><box><size>0.08 0.08 2.0</size></box></geometry></collision>
       <visual name="pole"><pose>0 0 1.0 0 0 0</pose><geometry><box><size>0.08 0.08 2.0</size></box></geometry><material><ambient>0.3 0.3 0.3 1</ambient></material></visual>

@@ -90,24 +90,28 @@ NODES = {
 # ── Line segment definitions (for IR sensor simulation) ───────────────
 # Each entry: (x1,y1, x2,y2) — the painted line goes between these two points.
 LINE_SEGMENTS = [
-    # Dock approach lanes (vertical)
-    (-6,-8.8, -6,-5), (0,-8.8, 0,-5), (6,-8.8, 6,-5),
-    # South row
-    (-12,-5, 12,-5),
-    # West spine
-    (-12,-5, -12,5),
-    # East spine
-    (12,-5, 12,5),
-    # North row
-    (-12,5, 12,5),
-    # Depot spurs
-    (-12,5, -12,8), (12,5, 12,8),
-    # Mid horizontal
-    (-12,0, 8,0),
-    # Shop spine
-    (8,-5, 8,5),
-    # Shop connectors
-    (6,5, 8,5), (6,-5, 8,-5),
+    # Dock approach lanes (vertical, white)
+    (-6.0,-8.8, -6.0,-5.0),
+    ( 0.0,-8.8,  0.0,-5.0),
+    ( 6.0,-8.8,  6.0,-5.0),
+    # South junction row (yellow, y=-5, x=-12..+12)
+    (-12.0,-5.0, 12.0,-5.0),
+    # West spine (yellow, x=-12, y=-5..+5)
+    (-12.0,-5.0, -12.0, 5.0),
+    # East spine (yellow, x=+12, y=-5..+5)
+    ( 12.0,-5.0,  12.0, 5.0),
+    # North junction row (yellow, y=+5, x=-12..+12)
+    (-12.0, 5.0,  12.0, 5.0),
+    # Depot-A spur (yellow, x=-12, y=+5..+8)
+    (-12.0, 5.0, -12.0, 8.0),
+    # Depot-B spur (yellow, x=+12, y=+5..+8)
+    ( 12.0, 5.0,  12.0, 8.0),
+    # Mid horizontal (yellow, y=0, x=-12..+8)
+    (-12.0, 0.0,   8.0, 0.0),
+    # East-mid connector (yellow, y=0, x=+8..+12)
+    (  8.0, 0.0,  12.0, 0.0),
+    # Shop spine (yellow, x=+8, y=-5..+5)
+    (  8.0,-5.0,   8.0, 5.0),
 ]
 
 # ── Graph adjacency (which nodes connect directly on a line) ──────────
@@ -121,8 +125,8 @@ GRAPH = {
     "j_ws":     ["j_sw","j_es","j_wm"],
     "j_es":     ["j_se","j_ws","j_em","j_shop_s"],
     "j_wm":     ["j_ws","j_wn","j_shop_m","depot_c"],
-    "j_em":     ["j_es","j_en"],
-    "j_shop_m": ["j_wm","j_shop_n","j_shop_s","shop_2"],
+    "j_em":     ["j_es","j_en","j_shop_m"],
+    "j_shop_m": ["j_wm","j_em","j_shop_n","j_shop_s","shop_2"],
     "j_wn":     ["j_wm","j_nw","depot_a"],
     "j_nw":     ["j_wn","j_nc"],
     "j_nc":     ["j_nw","j_ne"],
@@ -270,18 +274,10 @@ class AGVController(Node):
         self._begin_going_to_depot()
 
     def _on_odom(self, msg: Odometry):
-        """Convert model-local diff-drive odometry into the factory world frame."""
-        hx, hy = DOCK_HOME[self._agv_id]
-        ox = msg.pose.pose.position.x
-        oy = msg.pose.pose.position.y
-        cy = math.cos(INITIAL_YAW)
-        sy = math.sin(INITIAL_YAW)
-        self._x = hx + ox * cy - oy * sy
-        self._y = hy + ox * sy + oy * cy
-        self._yaw = math.atan2(
-            math.sin(INITIAL_YAW + _yaw_from_quaternion(msg.pose.pose.orientation)),
-            math.cos(INITIAL_YAW + _yaw_from_quaternion(msg.pose.pose.orientation)),
-        )
+        """Ignition diff-drive publishes odometry in the world frame directly."""
+        self._x   = msg.pose.pose.position.x
+        self._y   = msg.pose.pose.position.y
+        self._yaw = _yaw_from_quaternion(msg.pose.pose.orientation)
         self._have_odom = True
 
     # ── Transitions ───────────────────────────────────────────────────
