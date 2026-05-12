@@ -1,31 +1,43 @@
 """
 agv_controller.py
 ────────────────────────────────────────────────────────────────────────
-CPPS Physical Layer: AGV Line-Follower State Machine
+CPPS Physical Layer: AGV Line-Follower with 5-channel IR Sensor
 
-Each AGV navigates a fixed line-network graph by following named waypoint
-nodes in sequence.  Navigation is time-based dead-reckoning:
-  - Each straight leg drives for  distance / LINEAR_SPEED  seconds
-  - Each turn drives angular for  angle / ANGULAR_SPEED  seconds
-  - No odometry dependency — works without sensor feedback
+Pose tracking
+─────────────
+Ignition diff-drive publishes odometry in a local "odom" frame that
+starts at (0,0,0) when the robot spawns.  We convert to world frame:
 
-The route planner builds a node-path through the graph from the current
-position to the target, ensuring the robot only travels along real line
-segments (no cutting through walls or open floor).
+    world_x = spawn_x + odom_x * cos(spawn_yaw) - odom_y * sin(spawn_yaw)
+    world_y = spawn_y + odom_x * sin(spawn_yaw) + odom_y * cos(spawn_yaw)
+    world_yaw = spawn_yaw + odom_yaw
 
-IR sensor behaviour (simulated):
-  The robot publishes a /agv_N/ir_sensor topic showing "ON_LINE" or
-  "OFF_LINE" based on whether the estimated pose is within LINE_HALF_WIDTH
-  of any registered line segment.  This drives the line-follower P-
-  controller that applies a small corrective angular.z to keep the robot
-  centred on the line.  Speed is reduced when correction is large.
+Until the first odometry message arrives we dead-reckon from spawn.
 
-State machine:
-  IDLE → GOING_TO_DEPOT → LOADING → GOING_TO_SHOP → UNLOADING
-       → RETURNING → IDLE
+5-channel IR sensor
+───────────────────
+5 virtual sensors are spaced 3.5 cm apart across the robot's front
+undercarriage (mirroring the physical ir_bar visual).  Each cycle we
+project each sensor into world frame and check whether it lies within
+LINE_HALF_WIDTH of any painted line segment.  The weighted centre of
+active sensors gives a lateral error in [-2, +2].
+
+Control strategy
+────────────────
+  angular.z = KP_IR   * ir_error          (line-follow)
+             + KP_HEAD * heading_error      (bearing to next node)
+  linear.x  = SPEED_MAX * (1 - SPEED_DAMP * |angular.z| / MAX_ANG)
+
+Clamp angular.z to ±MAX_ANG.  When heading_error > TURN_THRESH, stop
+translating (pure in-place turn) so the robot aligns before driving.
+
+State machine: IDLE → GOING_TO_DEPOT → LOADING → GOING_TO_SHOP
+             → UNLOADING → RETURNING → IDLE
 """
 
 import math
+from collections import deque
+
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
@@ -34,87 +46,77 @@ from std_msgs.msg import Header, String
 from agv_interfaces.msg import AGVStatus, ReplenishmentOrder
 
 # ── Tuning ────────────────────────────────────────────────────────────
-LINEAR_SPEED    = 0.6    # m/s straight driving
-ANGULAR_SPEED   = 0.8    # rad/s turning
-LOAD_TIME_SEC   = 4.0
-UNLOAD_TIME_SEC = 4.0
-CTRL_DT         = 0.05   # 20 Hz control loop
-LINE_HALF_WIDTH = 0.18   # metres — IR sensor detects line within this band
-KP_LINE         = 1.2    # P-gain for line-follow cross-track correction
-KP_HEADING      = 1.8    # P-gain for heading-to-next-node correction
-GOAL_TOLERANCE  = 0.28   # metres
-INITIAL_YAW     = math.pi / 2
+SPEED_MAX       = 0.55   # m/s forward speed
+MAX_ANG         = 0.90   # rad/s max angular speed
+SPEED_DAMP      = 0.70   # how much angular correction damps forward speed
+KP_IR           = 0.55   # gain on IR lateral error  (±2 → ±1.1 rad/s)
+KP_HEAD         = 1.60   # gain on heading error
+TURN_THRESH     = 0.28   # rad — stop translating when heading error exceeds this
+GOAL_TOL        = 0.30   # m — arrival tolerance at each node
+LINE_HW         = 0.12   # m — half-width of each line strip (0.12 m strip → ±6 cm)
+CTRL_DT         = 0.05   # s  — 20 Hz
 
-# ── Home docks ────────────────────────────────────────────────────────
-DOCK_HOME = {
-    "agv_1": (-6.0, -8.8),
-    "agv_2": ( 0.0, -8.8),
-    "agv_3": ( 6.0, -8.8),
+# IR sensor bar geometry (robot-local, relative to base_link centre)
+# 5 sensors spaced 3.5 cm apart along y-axis, 24 cm ahead (front of robot)
+IR_FORWARD_OFFSET = 0.24   # m ahead of base_link origin
+IR_SENSOR_Y = [-0.070, -0.035, 0.0, 0.035, 0.070]  # left=positive y
+IR_WEIGHTS  = [-2,     -1,     0,   +1,    +2]      # signed lateral weight per sensor
+
+LOAD_TIME       = 4.0
+UNLOAD_TIME     = 4.0
+
+# ── Home spawn positions ──────────────────────────────────────────────
+SPAWN = {
+    "agv_1": (-6.0, -8.8, math.pi / 2),   # facing north
+    "agv_2": ( 0.0, -8.8, math.pi / 2),
+    "agv_3": ( 6.0, -8.8, math.pi / 2),
 }
 
-# ── Line network node positions ────────────────────────────────────────
-# Every named node is a physical point on the painted line grid.
+# ── Line network node positions (world frame) ─────────────────────────
 NODES = {
-    # Dock home positions
-    "dock_1": (-6.0, -8.8),
-    "dock_2": ( 0.0, -8.8),
-    "dock_3": ( 6.0, -8.8),
-    # South junction row  (y = -5)
-    "j_sw":   (-6.0, -5.0),
-    "j_sc":   ( 0.0, -5.0),
-    "j_se":   ( 6.0, -5.0),
-    "j_ws":   (-12.0,-5.0),
-    "j_es":   ( 12.0,-5.0),
-    # Mid row  (y = 0)
-    "j_wm":   (-12.0, 0.0),
-    "j_em":   ( 12.0, 0.0),
-    "j_shop_m":( 8.0,  0.0),
-    # North junction row  (y = +5)
-    "j_wn":   (-12.0, 5.0),
-    "j_nw":   (-6.0,  5.0),
-    "j_nc":   ( 0.0,  5.0),
-    "j_ne":   ( 6.0,  5.0),
-    "j_en":   ( 12.0, 5.0),
-    "j_shop_n":( 8.0,  5.0),
-    "j_shop_s":( 8.0, -5.0),
-    # Depot stops
-    "depot_a":(-12.0,  8.0),
-    "depot_b":( 12.0,  8.0),
-    "depot_c":(-12.0, -3.0),
-    # Shop stops (on shop spine, x=8)
-    "shop_1": ( 8.0,  5.0),   # shop_1 at y=+5
-    "shop_2": ( 8.0,  0.0),   # shop_2 at y=0
-    "shop_3": ( 8.0, -5.0),   # shop_3 at y=-5
+    "dock_1":    (-6.0, -8.8),
+    "dock_2":    ( 0.0, -8.8),
+    "dock_3":    ( 6.0, -8.8),
+    "j_sw":      (-6.0, -5.0),
+    "j_sc":      ( 0.0, -5.0),
+    "j_se":      ( 6.0, -5.0),
+    "j_ws":      (-12.0,-5.0),
+    "j_es":      ( 12.0,-5.0),
+    "j_wm":      (-12.0, 0.0),
+    "j_em":      ( 12.0, 0.0),
+    "j_shop_m":  (  8.0, 0.0),
+    "j_wn":      (-12.0, 5.0),
+    "j_nw":      ( -6.0, 5.0),
+    "j_nc":      (  0.0, 5.0),
+    "j_ne":      (  6.0, 5.0),
+    "j_en":      ( 12.0, 5.0),
+    "j_shop_n":  (  8.0, 5.0),
+    "j_shop_s":  (  8.0,-5.0),
+    "depot_a":   (-12.0, 8.0),
+    "depot_b":   ( 12.0, 8.0),
+    "depot_c":   (-12.0,-3.0),
+    "shop_1":    (  8.0, 5.0),
+    "shop_2":    (  8.0, 0.0),
+    "shop_3":    (  8.0,-5.0),
 }
 
-# ── Line segment definitions (for IR sensor simulation) ───────────────
-# Each entry: (x1,y1, x2,y2) — the painted line goes between these two points.
-LINE_SEGMENTS = [
-    # Dock approach lanes (vertical, white)
-    (-6.0,-8.8, -6.0,-5.0),
-    ( 0.0,-8.8,  0.0,-5.0),
-    ( 6.0,-8.8,  6.0,-5.0),
-    # South junction row (yellow, y=-5, x=-12..+12)
-    (-12.0,-5.0, 12.0,-5.0),
-    # West spine (yellow, x=-12, y=-5..+5)
-    (-12.0,-5.0, -12.0, 5.0),
-    # East spine (yellow, x=+12, y=-5..+5)
-    ( 12.0,-5.0,  12.0, 5.0),
-    # North junction row (yellow, y=+5, x=-12..+12)
-    (-12.0, 5.0,  12.0, 5.0),
-    # Depot-A spur (yellow, x=-12, y=+5..+8)
-    (-12.0, 5.0, -12.0, 8.0),
-    # Depot-B spur (yellow, x=+12, y=+5..+8)
-    ( 12.0, 5.0,  12.0, 8.0),
-    # Mid horizontal (yellow, y=0, x=-12..+8)
-    (-12.0, 0.0,   8.0, 0.0),
-    # East-mid connector (yellow, y=0, x=+8..+12)
-    (  8.0, 0.0,  12.0, 0.0),
-    # Shop spine (yellow, x=+8, y=-5..+5)
-    (  8.0,-5.0,   8.0, 5.0),
+# ── Painted line segments (x1,y1, x2,y2) ────────────────────────────
+LINE_SEGS = [
+    (-6.0,-8.8,  -6.0,-5.0),   # dock 1 lane
+    ( 0.0,-8.8,   0.0,-5.0),   # dock 2 lane
+    ( 6.0,-8.8,   6.0,-5.0),   # dock 3 lane
+    (-12.0,-5.0, 12.0,-5.0),   # south row
+    (-12.0,-5.0,-12.0, 5.0),   # west spine
+    ( 12.0,-5.0, 12.0, 5.0),   # east spine
+    (-12.0, 5.0, 12.0, 5.0),   # north row
+    (-12.0, 5.0,-12.0, 8.0),   # depot-A spur
+    ( 12.0, 5.0, 12.0, 8.0),   # depot-B spur
+    (-12.0, 0.0,  8.0, 0.0),   # mid horizontal
+    (  8.0, 0.0, 12.0, 0.0),   # east-mid connector
+    (  8.0,-5.0,  8.0, 5.0),   # shop spine
 ]
 
-# ── Graph adjacency (which nodes connect directly on a line) ──────────
+# ── Graph ─────────────────────────────────────────────────────────────
 GRAPH = {
     "dock_1":   ["j_sw"],
     "dock_2":   ["j_sc"],
@@ -142,293 +144,291 @@ GRAPH = {
     "shop_3":   ["j_shop_s"],
 }
 
-# ── Material depot node names ─────────────────────────────────────────
 DEPOT_NODE = {"A": "depot_a", "B": "depot_b", "C": "depot_c"}
-
-# ── Shop node names ───────────────────────────────────────────────────
 SHOP_NODE  = {"shop_1": "shop_1", "shop_2": "shop_2", "shop_3": "shop_3"}
-
-# ── Home node per AGV ─────────────────────────────────────────────────
 HOME_NODE  = {"agv_1": "dock_1", "agv_2": "dock_2", "agv_3": "dock_3"}
 
 
-# ── BFS path planner ──────────────────────────────────────────────────
-def bfs_path(start_node: str, goal_node: str) -> list[str]:
-    """Return ordered list of node names from start to goal (inclusive)."""
-    if start_node == goal_node:
-        return [start_node]
-    from collections import deque
-    visited = {start_node}
-    queue   = deque([[start_node]])
+# ── Helpers ───────────────────────────────────────────────────────────
+def bfs_path(start: str, goal: str) -> list:
+    if start == goal:
+        return [start]
+    visited = {start}
+    queue = deque([[start]])
     while queue:
         path = queue.popleft()
         for nbr in GRAPH.get(path[-1], []):
             if nbr not in visited:
-                new_path = path + [nbr]
-                if nbr == goal_node:
-                    return new_path
+                np = path + [nbr]
+                if nbr == goal:
+                    return np
                 visited.add(nbr)
-                queue.append(new_path)
-    return [start_node, goal_node]   # fallback direct
+                queue.append(np)
+    return [start, goal]
+
+
+def _yaw_from_q(q) -> float:
+    siny = 2.0 * (q.w * q.z + q.x * q.y)
+    cosy = 1.0 - 2.0 * (q.y * q.y + q.z * q.z)
+    return math.atan2(siny, cosy)
 
 
 def _nearest_node(x: float, y: float) -> str:
-    """Snap pose to nearest graph node."""
-    best, best_d = "dock_1", 1e9
-    for name, (nx, ny) in NODES.items():
+    best, bd = "dock_1", 1e9
+    for n, (nx, ny) in NODES.items():
         d = math.hypot(x - nx, y - ny)
-        if d < best_d:
-            best_d = d
-            best = name
+        if d < bd:
+            bd, best = d, n
     return best
 
 
-def _cross_track_error(px, py, ax, ay, bx, by) -> float:
-    """Signed lateral distance from point P to directed line A→B."""
+def _pt_to_seg_dist(px, py, ax, ay, bx, by) -> float:
+    """Perpendicular distance from point to line segment (unsigned)."""
     dx, dy = bx - ax, by - ay
-    length = math.hypot(dx, dy)
-    if length < 1e-6:
-        return 0.0
-    # Perpendicular (right-hand positive)
-    return ((py - ay) * dx - (px - ax) * dy) / length
+    L2 = dx*dx + dy*dy
+    if L2 < 1e-12:
+        return math.hypot(px - ax, py - ay)
+    t = max(0.0, min(1.0, ((px-ax)*dx + (py-ay)*dy) / L2))
+    return math.hypot(px - (ax + t*dx), py - (ay + t*dy))
 
 
-def _on_any_line(px, py) -> bool:
-    for x1, y1, x2, y2 in LINE_SEGMENTS:
-        dx, dy = x2 - x1, y2 - y1
-        length = math.hypot(dx, dy)
-        if length < 1e-6:
-            continue
-        t = max(0.0, min(1.0, ((px - x1)*dx + (py - y1)*dy) / (length * length)))
-        cx = x1 + t * dx - px
-        cy = y1 + t * dy - py
-        if math.hypot(cx, cy) <= LINE_HALF_WIDTH:
-            return True
-    return False
+def _ir_sensor_reading(world_x, world_y, world_yaw) -> tuple:
+    """
+    Returns (ir_error, on_line_count).
+    ir_error  in [-2.0, +2.0] — weighted lateral error from 5 sensors.
+              Negative = line is to the LEFT → turn left (negative angular.z).
+              Positive = line is to the RIGHT → turn right (positive angular.z).
+    on_line_count = number of sensors detecting the line (0..5).
+    """
+    cos_y = math.cos(world_yaw)
+    sin_y = math.sin(world_yaw)
+    hits = []
+    for sy, w in zip(IR_SENSOR_Y, IR_WEIGHTS):
+        # Sensor position in world frame
+        sx = world_x + IR_FORWARD_OFFSET * cos_y - sy * sin_y
+        sy_w = world_y + IR_FORWARD_OFFSET * sin_y + sy * cos_y
+        on = any(_pt_to_seg_dist(sx, sy_w, *seg) <= LINE_HW for seg in LINE_SEGS)
+        hits.append((on, w))
 
-
-def _clamp(value: float, low: float, high: float) -> float:
-    return max(low, min(high, value))
-
-
-def _yaw_from_quaternion(q) -> float:
-    siny_cosp = 2.0 * (q.w * q.z + q.x * q.y)
-    cosy_cosp = 1.0 - 2.0 * (q.y * q.y + q.z * q.z)
-    return math.atan2(siny_cosp, cosy_cosp)
+    on_count = sum(1 for on, _ in hits if on)
+    if on_count == 0:
+        return 0.0, 0
+    weighted = sum(w for on, w in hits if on)
+    return weighted / on_count, on_count
 
 
 class AGVController(Node):
     def __init__(self):
         super().__init__("agv_controller")
         self.declare_parameter("agv_id", "agv_1")
-        self._agv_id: str = self.get_parameter("agv_id").value
-        self.get_logger().info(f"AGVController starting for {self._agv_id}")
+        self._id: str = self.get_parameter("agv_id").value
 
-        # ── State ─────────────────────────────────────────────────────
-        self._state  = "IDLE"
-        self._order: ReplenishmentOrder | None = None
+        sx, sy, syaw = SPAWN[self._id]
+        self._spawn_x   = sx
+        self._spawn_y   = sy
+        self._spawn_yaw = syaw
 
-        # Navigation
-        self._path: list[str] = []    # remaining node names to visit
-
-        # Wait timer
-        self._wait_elapsed  = 0.0
-        self._wait_duration = 0.0
-        self._waiting       = False
-
-        # Dead-reckoning pose
-        hx, hy = DOCK_HOME[self._agv_id]
-        self._x   = hx
-        self._y   = hy
-        self._yaw = INITIAL_YAW   # initially facing north (+Y)
+        # World-frame pose (updated from odometry)
+        self._x   = sx
+        self._y   = sy
+        self._yaw = syaw
         self._have_odom = False
 
-        # Current leg start (for cross-track error)
-        self._leg_start_x = hx
-        self._leg_start_y = hy
+        # State machine
+        self._state  = "IDLE"
+        self._order  = None
+        self._path   = []          # remaining nodes
+        self._leg_start_x = sx
+        self._leg_start_y = sy
 
-        # ── ROS interfaces ────────────────────────────────────────────
-        self._cmd_pub    = self.create_publisher(Twist, f"/model/{self._agv_id}/cmd_vel", 10)
-        self._stat_pub   = self.create_publisher(AGVStatus, f"/{self._agv_id}/status", 10)
-        self._ir_pub     = self.create_publisher(String, f"/{self._agv_id}/ir_sensor", 10)
-        self._inprog_pub = self.create_publisher(ReplenishmentOrder, "/orders/in_progress", 10)
-        self._done_pub   = self.create_publisher(ReplenishmentOrder, "/orders/completed", 10)
+        # Wait timer (LOADING / UNLOADING)
+        self._waiting       = False
+        self._wait_elapsed  = 0.0
+        self._wait_duration = 0.0
 
-        self.create_subscription(ReplenishmentOrder, f"/{self._agv_id}/task", self._on_task, 10)
-        self.create_subscription(Odometry, f"/model/{self._agv_id}/odometry", self._on_odom, 20)
+        # ROS interfaces
+        self._cmd  = self.create_publisher(Twist,               f"/model/{self._id}/cmd_vel",    10)
+        self._stat = self.create_publisher(AGVStatus,           f"/{self._id}/status",            10)
+        self._ir   = self.create_publisher(String,              f"/{self._id}/ir_sensor",         10)
+        self._prog = self.create_publisher(ReplenishmentOrder,  "/orders/in_progress",            10)
+        self._done = self.create_publisher(ReplenishmentOrder,  "/orders/completed",              10)
 
-        self.create_timer(CTRL_DT, self._control_loop)
-        self.create_timer(0.5,     self._publish_status)
+        self.create_subscription(ReplenishmentOrder, f"/{self._id}/task",
+                                 self._on_task, 10)
+        self.create_subscription(Odometry,           f"/model/{self._id}/odometry",
+                                 self._on_odom, 20)
 
-        self._publish_status()   # announce IDLE immediately
+        self.create_timer(CTRL_DT, self._ctrl_loop)
+        self.create_timer(0.5,     self._pub_status)
+        self._pub_status()
+        self.get_logger().info(f"AGVController ready: {self._id}")
 
-    # ── Task callback ─────────────────────────────────────────────────
+    # ── Odometry ──────────────────────────────────────────────────────
+    def _on_odom(self, msg: Odometry):
+        """
+        Ignition diff-drive odom frame origin = robot spawn pose.
+        Convert to world frame:
+            world = spawn_pos + R(spawn_yaw) * odom_pos
+            world_yaw = spawn_yaw + odom_yaw
+        """
+        ox = msg.pose.pose.position.x
+        oy = msg.pose.pose.position.y
+        ow = _yaw_from_q(msg.pose.pose.orientation)
+
+        cy = math.cos(self._spawn_yaw)
+        sy = math.sin(self._spawn_yaw)
+
+        self._x   = self._spawn_x + ox * cy - oy * sy
+        self._y   = self._spawn_y + ox * sy + oy * cy
+        self._yaw = self._spawn_yaw + ow
+        self._have_odom = True
+
+    # ── Task ──────────────────────────────────────────────────────────
     def _on_task(self, msg: ReplenishmentOrder):
         if self._state != "IDLE":
-            self.get_logger().warn(f"{self._agv_id}: busy ({self._state}), rejecting")
+            self.get_logger().warn(f"{self._id}: busy ({self._state}), ignoring task")
             return
         self._order = msg
         self.get_logger().info(
-            f"{self._agv_id}: task order={msg.order_id} mat={msg.material_type} → {msg.shop_id}"
+            f"{self._id}: task={msg.order_id} mat={msg.material_type} → {msg.shop_id}"
         )
-        self._begin_going_to_depot()
+        self._go_to_depot()
 
-    def _on_odom(self, msg: Odometry):
-        """Ignition diff-drive publishes odometry in the world frame directly."""
-        self._x   = msg.pose.pose.position.x
-        self._y   = msg.pose.pose.position.y
-        self._yaw = _yaw_from_quaternion(msg.pose.pose.orientation)
-        self._have_odom = True
-
-    # ── Transitions ───────────────────────────────────────────────────
-    def _begin_going_to_depot(self):
-        mat  = self._order.material_type
-        goal = DEPOT_NODE[mat]
+    # ── State transitions ─────────────────────────────────────────────
+    def _go_to_depot(self):
         self._state = "GOING_TO_DEPOT"
-        self._plan_route(goal)
-        self.get_logger().info(f"{self._agv_id}: → GOING_TO_DEPOT ({goal})")
+        self._plan(DEPOT_NODE[self._order.material_type])
+        self.get_logger().info(f"{self._id}: → GOING_TO_DEPOT")
 
-    def _begin_loading(self):
-        self._state         = "LOADING"
-        self._waiting       = True
-        self._wait_elapsed  = 0.0
-        self._wait_duration = LOAD_TIME_SEC
+    def _start_loading(self):
+        self._state = "LOADING"
+        self._waiting = True
+        self._wait_elapsed = 0.0
+        self._wait_duration = LOAD_TIME
         self._stop()
-        self.get_logger().info(f"{self._agv_id}: → LOADING ({LOAD_TIME_SEC}s)")
+        self.get_logger().info(f"{self._id}: → LOADING")
 
-    def _begin_going_to_shop(self):
-        shop = self._order.shop_id
-        goal = SHOP_NODE[shop]
+    def _go_to_shop(self):
         self._state = "GOING_TO_SHOP"
-        self._plan_route(goal)
-        self.get_logger().info(f"{self._agv_id}: → GOING_TO_SHOP ({goal})")
+        self._plan(SHOP_NODE[self._order.shop_id])
+        self.get_logger().info(f"{self._id}: → GOING_TO_SHOP")
 
-    def _begin_unloading(self):
-        self._state         = "UNLOADING"
-        self._waiting       = True
-        self._wait_elapsed  = 0.0
-        self._wait_duration = UNLOAD_TIME_SEC
+    def _start_unloading(self):
+        self._state = "UNLOADING"
+        self._waiting = True
+        self._wait_elapsed = 0.0
+        self._wait_duration = UNLOAD_TIME
         self._stop()
         self._order.status = "in_progress"
-        self._inprog_pub.publish(self._order)
-        self.get_logger().info(f"{self._agv_id}: → UNLOADING ({UNLOAD_TIME_SEC}s)")
+        self._prog.publish(self._order)
+        self.get_logger().info(f"{self._id}: → UNLOADING")
 
-    def _begin_returning(self):
-        home = HOME_NODE[self._agv_id]
+    def _return_home(self):
         self._state = "RETURNING"
         self._order.status = "completed"
-        self._done_pub.publish(self._order)
+        self._done.publish(self._order)
         self._order = None
-        self._plan_route(home)
-        self.get_logger().info(f"{self._agv_id}: → RETURNING ({home})")
+        self._plan(HOME_NODE[self._id])
+        self.get_logger().info(f"{self._id}: → RETURNING")
 
     def _set_idle(self):
         self._state = "IDLE"
         self._stop()
-        hx, hy = DOCK_HOME[self._agv_id]
-        self._x, self._y = hx, hy
-        self.get_logger().info(f"{self._agv_id}: → IDLE (docked)")
+        sx, sy, _ = SPAWN[self._id]
+        self._x, self._y = sx, sy
+        self.get_logger().info(f"{self._id}: → IDLE")
 
     # ── Route planning ────────────────────────────────────────────────
-    def _plan_route(self, goal_node: str):
+    def _plan(self, goal: str):
         start = _nearest_node(self._x, self._y)
-        self._path = bfs_path(start, goal_node)
-        # Remove first node if we're already essentially at it
+        self._path = bfs_path(start, goal)
         if len(self._path) > 1:
             nx, ny = NODES[self._path[0]]
-            if math.hypot(self._x - nx, self._y - ny) < 0.3:
+            if math.hypot(self._x - nx, self._y - ny) < GOAL_TOL:
                 self._path.pop(0)
-        self.get_logger().info(f"{self._agv_id}: route {' → '.join(self._path)}")
-        self._advance_to_next_node()
-
-    def _advance_to_next_node(self):
-        if not self._path:
-            return
+        self.get_logger().info(
+            f"{self._id}: route [{' → '.join(self._path)}]"
+        )
         self._leg_start_x = self._x
         self._leg_start_y = self._y
 
-    # ── Main control loop (20 Hz) ─────────────────────────────────────
-    def _control_loop(self):
-        # ── Publish simulated IR sensor reading ──
-        on_line = _on_any_line(self._x, self._y)
-        ir_msg  = String()
-        ir_msg.data = "ON_LINE" if on_line else "OFF_LINE"
-        self._ir_pub.publish(ir_msg)
+    # ── Control loop (20 Hz) ──────────────────────────────────────────
+    def _ctrl_loop(self):
+        # ── IR sensor reading (always compute for topic publish) ──
+        ir_err, on_count = _ir_sensor_reading(self._x, self._y, self._yaw)
+        ir_msg = String()
+        ir_msg.data = f"ON_LINE:{on_count}" if on_count > 0 else "OFF_LINE"
+        self._ir.publish(ir_msg)
 
-        # ── Waiting (LOADING / UNLOADING) ──
+        # ── Dead-reckon if odometry hasn't arrived yet ──
+        if not self._have_odom:
+            self._x += SPEED_MAX * 0.2 * CTRL_DT * math.cos(self._yaw)
+            self._y += SPEED_MAX * 0.2 * CTRL_DT * math.sin(self._yaw)
+
+        # ── Wait states ──
         if self._waiting:
             self._wait_elapsed += CTRL_DT
             if self._wait_elapsed >= self._wait_duration:
                 self._waiting = False
-                if self._state == "LOADING":
-                    self._begin_going_to_shop()
-                elif self._state == "UNLOADING":
-                    self._begin_returning()
+                if   self._state == "LOADING":   self._go_to_shop()
+                elif self._state == "UNLOADING": self._return_home()
             return
 
         if self._state not in ("GOING_TO_DEPOT", "GOING_TO_SHOP", "RETURNING"):
             return
 
-        # ── Path complete? ──
+        # ── Path finished ──
         if not self._path:
-            if self._state == "GOING_TO_DEPOT":
-                self._begin_loading()
-            elif self._state == "GOING_TO_SHOP":
-                self._begin_unloading()
-            elif self._state == "RETURNING":
-                self._set_idle()
+            if   self._state == "GOING_TO_DEPOT": self._start_loading()
+            elif self._state == "GOING_TO_SHOP":  self._start_unloading()
+            elif self._state == "RETURNING":      self._set_idle()
             return
 
-        # ── Drive toward next graph node using real odometry pose ──
+        # ── Next waypoint ──
         gx, gy = NODES[self._path[0]]
-        dist_to_goal = math.hypot(gx - self._x, gy - self._y)
+        dist = math.hypot(gx - self._x, gy - self._y)
+
+        # ── Arrived? ──
+        if dist < GOAL_TOL:
+            self._stop()
+            arrived = self._path.pop(0)
+            self.get_logger().info(f"{self._id}: ✓ {arrived}")
+            self._leg_start_x = self._x
+            self._leg_start_y = self._y
+            return
+
+        # ── Heading error toward next node ──
         target_yaw = math.atan2(gy - self._y, gx - self._x)
-        heading_err = math.atan2(
+        head_err = math.atan2(
             math.sin(target_yaw - self._yaw),
             math.cos(target_yaw - self._yaw),
         )
 
-        # If odometry is late, keep a minimal fallback so startup doesn't stall.
-        if not self._have_odom:
-            self._x += LINEAR_SPEED * CTRL_DT * math.cos(self._yaw)
-            self._y += LINEAR_SPEED * CTRL_DT * math.sin(self._yaw)
+        # ── Angular command = heading correction + IR line correction ──
+        angular = KP_HEAD * head_err + KP_IR * ir_err
+        angular = max(-MAX_ANG, min(MAX_ANG, angular))
 
-        cte = _cross_track_error(
-            self._x, self._y,
-            self._leg_start_x, self._leg_start_y,
-            gx, gy,
-        )
-        line_correction = -KP_LINE * cte
-        heading_correction = KP_HEADING * heading_err
-        angular_correction = _clamp(heading_correction + line_correction, -ANGULAR_SPEED, ANGULAR_SPEED)
-
-        if abs(heading_err) > 0.35:
+        # Stop translating while making large heading corrections (in-place turn)
+        if abs(head_err) > TURN_THRESH:
             speed = 0.0
         else:
-            speed = LINEAR_SPEED * (1.0 - 0.55 * min(1.0, abs(angular_correction)))
+            speed = SPEED_MAX * (1.0 - SPEED_DAMP * abs(angular) / MAX_ANG)
+            speed = max(0.0, speed)
 
         twist = Twist()
         twist.linear.x  = speed
-        twist.angular.z = angular_correction
-        self._cmd_pub.publish(twist)
-
-        # Check arrival at waypoint
-        if dist_to_goal < GOAL_TOLERANCE:
-            self._stop()
-            node_name = self._path.pop(0)
-            self.get_logger().info(f"{self._agv_id}: reached {node_name}")
-            if self._path:
-                self._advance_to_next_node()
+        twist.angular.z = angular
+        self._cmd.publish(twist)
 
     def _stop(self):
-        self._cmd_pub.publish(Twist())
+        self._cmd.publish(Twist())
 
     # ── Status ────────────────────────────────────────────────────────
-    def _publish_status(self):
+    def _pub_status(self):
         msg = AGVStatus()
-        msg.header      = Header()
+        msg.header = Header()
         msg.header.stamp = self.get_clock().now().to_msg()
-        msg.agv_id            = self._agv_id
+        msg.agv_id            = self._id
         msg.state             = self._state
         msg.current_order_id  = self._order.order_id if self._order else ""
         msg.carrying_material = (
@@ -439,7 +439,7 @@ class AGVController(Node):
         msg.battery_pct = 100.0
         msg.pos_x = self._x
         msg.pos_y = self._y
-        self._stat_pub.publish(msg)
+        self._stat.publish(msg)
 
 
 def main(args=None):
