@@ -57,12 +57,16 @@ def generate_launch_description():
             executable="parameter_bridge",
             name="gz_bridge",
             arguments=[
+                # cmd_vel: ROS2 → Ignition
                 "/model/agv_1/cmd_vel@geometry_msgs/msg/Twist]ignition.msgs.Twist",
                 "/model/agv_2/cmd_vel@geometry_msgs/msg/Twist]ignition.msgs.Twist",
                 "/model/agv_3/cmd_vel@geometry_msgs/msg/Twist]ignition.msgs.Twist",
+                # odometry: Ignition → ROS2 (kept for velocity data)
                 "/model/agv_1/odometry@nav_msgs/msg/Odometry[ignition.msgs.Odometry",
                 "/model/agv_2/odometry@nav_msgs/msg/Odometry[ignition.msgs.Odometry",
                 "/model/agv_3/odometry@nav_msgs/msg/Odometry[ignition.msgs.Odometry",
+                # world pose info: exact world-frame poses for every model (Ignition → ROS2)
+                "/world/agv_factory/pose/info@tf2_msgs/msg/TFMessage[ignition.msgs.Pose_V",
             ],
             output="screen",
         )
