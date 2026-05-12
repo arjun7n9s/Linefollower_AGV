@@ -46,23 +46,27 @@ from std_msgs.msg import Header, String
 from agv_interfaces.msg import AGVStatus, ReplenishmentOrder
 
 # ── Tuning ────────────────────────────────────────────────────────────
-SPEED_MAX       = 0.55   # m/s forward speed
-CREEP_SPEED     = 0.08   # m/s minimum creep during turns (keeps robot moving)
+SPEED_MAX       = 0.50   # m/s forward speed
+CREEP_SPEED     = 0.06   # m/s minimum creep during turns
+SLOW_SPEED      = 0.18   # m/s approach speed near a node
+SLOW_DIST       = 1.20   # m  — start slowing within this distance of next node
 MAX_ANG         = 1.20   # rad/s max angular speed
-SPEED_DAMP      = 0.65   # how much angular correction damps forward speed
-KP_IR           = 0.50   # gain on IR lateral error  (±2 → ±1.0 rad/s)
-KP_HEAD         = 2.20   # gain on heading error (higher = faster turns)
-TURN_THRESH     = 0.20   # rad — switch to creep+turn mode above this
+SPEED_DAMP      = 0.60   # how much angular correction damps forward speed
+KP_IR           = 0.55   # gain on IR lateral error
+KP_HEAD         = 2.20   # gain on heading error
+TURN_THRESH     = 0.22   # rad — switch to creep+turn mode above this
 IR_THRESH       = 0.35   # rad — disable IR blending when heading error exceeds this
-GOAL_TOL        = 0.30   # m — arrival tolerance at each node
-LINE_HW         = 0.12   # m — half-width of each line strip (0.12 m strip → ±6 cm)
+GOAL_TOL        = 0.45   # m — arrival tolerance (larger = robust to odom drift)
+LINE_HW         = 0.15   # m — IR detection half-width (wider = more robust)
 CTRL_DT         = 0.05   # s  — 20 Hz
 
 # IR sensor bar geometry (robot-local, relative to base_link centre)
 # 5 sensors spaced 3.5 cm apart along y-axis, 24 cm ahead (front of robot)
 IR_FORWARD_OFFSET = 0.24   # m ahead of base_link origin
-IR_SENSOR_Y = [-0.070, -0.035, 0.0, 0.035, 0.070]  # left=positive y
-IR_WEIGHTS  = [-2,     -1,     0,   +1,    +2]      # signed lateral weight per sensor
+IR_SENSOR_Y = [-0.070, -0.035, 0.0, 0.035, 0.070]  # robot frame: +y=left, -y=right
+# When robot drifts right: left sensors (positive y) near line → positive weights fire
+# positive ir_err → positive angular.z → CCW = turn left → correct
+IR_WEIGHTS  = [-2,     -1,     0,   +1,    +2]      # left sensors=positive, right=negative
 
 LOAD_TIME       = 4.0
 UNLOAD_TIME     = 4.0
@@ -423,10 +427,11 @@ class AGVController(Node):
             angular = KP_HEAD * head_err + KP_IR * ir_err
         angular = max(-MAX_ANG, min(MAX_ANG, angular))
 
-        # During large heading corrections: creep forward slowly while turning
-        # (looks more natural and reaches next line faster than pure in-place turn)
+        # Speed control: slow near node to avoid overshoot, creep during turns
         if abs(head_err) > TURN_THRESH:
             speed = CREEP_SPEED
+        elif dist < SLOW_DIST:
+            speed = SLOW_SPEED
         else:
             speed = SPEED_MAX * (1.0 - SPEED_DAMP * abs(angular) / MAX_ANG)
             speed = max(CREEP_SPEED, speed)
