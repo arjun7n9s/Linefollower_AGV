@@ -133,7 +133,7 @@ The physical prototype follows the same core concept as the simulation: a wheele
 
 ![Wiring schematic](snaps/wiring.png)
 
-![Physical wiring architecture](snaps/wiring%20architecture.jpg)
+![Physical robot](snaps/Physical%20robot.jpg)
 
 ## Technology Stack
 
