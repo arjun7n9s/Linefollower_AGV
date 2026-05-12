@@ -174,6 +174,7 @@ class AGVController(Node):
         self._sx, self._sy, self._syaw = sx, sy, syaw
         self._x, self._y, self._yaw = sx, sy, syaw
         self._have_odom = False
+        self._odom_log_count = 0   # diagnostic: log first N odom messages
 
         self._state   = "IDLE"
         self._order   = None
@@ -208,6 +209,12 @@ class AGVController(Node):
         self._y   = self._sy + ox*sy + oy*cy
         self._yaw = self._syaw + ow
         self._have_odom = True
+        if self._odom_log_count < 5:
+            self._odom_log_count += 1
+            self.get_logger().info(
+                f"ODOM#{self._odom_log_count} raw=({ox:.3f},{oy:.3f},yaw={math.degrees(ow):.1f}°) "
+                f"world=({self._x:.3f},{self._y:.3f},yaw={math.degrees(self._yaw):.1f}°)"
+            )
 
     # ── Task ───────────────────────────────────────────────────────────
     def _on_task(self, msg):
