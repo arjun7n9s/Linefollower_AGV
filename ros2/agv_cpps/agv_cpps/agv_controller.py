@@ -222,7 +222,7 @@ class AGVController(Node):
 
         self.create_subscription(ReplenishmentOrder, f"/{self._id}/task",  self._on_task,  10)
         self.create_subscription(Odometry,  f"/model/{self._id}/odometry", self._on_odom,  20)
-        self.create_subscription(TFMessage, "/world/agv_factory/pose/info",self._on_pose,  20)
+        self.create_subscription(TFMessage, f"/model/{self._id}/pose",      self._on_pose,  20)
 
         self.create_timer(CTRL_DT, self._ctrl_loop)
         self.create_timer(0.5,     self._pub_status)
@@ -232,26 +232,18 @@ class AGVController(Node):
     # ── Pose from world pose/info topic (primary) ─────────────────────
     def _on_pose(self, msg: TFMessage):
         # Ignition publishes <model_name>/base_link as child_frame_id
-        target = f"{self._id}/base_link"
+        # /model/agv_N/pose publishes child_frame_id as bare link name e.g. "base_link"
         for tf in msg.transforms:
-            if tf.child_frame_id == target:
+            if tf.child_frame_id == "base_link":
                 self._x   = tf.transform.translation.x
                 self._y   = tf.transform.translation.y
                 self._yaw = _yaw_from_q(tf.transform.rotation)
                 self._have_pose = True
                 return
 
-    # ── Odometry (fallback only — pose NOT used) ──────────────────────
+    # ── Odometry (NOT used for pose — kept only so bridge topic is consumed) ──
     def _on_odom(self, msg: Odometry):
-        if not self._have_pose:
-            # Use odom with spawn-frame transform as fallback only
-            sx, sy, syaw = SPAWN[self._id]
-            ox = msg.pose.pose.position.x
-            oy = msg.pose.pose.position.y
-            cy, sy2 = math.cos(syaw), math.sin(syaw)
-            self._x   = sx + ox * cy - oy * sy2
-            self._y   = sy + ox * sy2 + oy * cy
-            self._yaw = syaw + _yaw_from_q(msg.pose.pose.orientation)
+        pass  # pose comes from /model/<id>/pose via _on_pose
 
     # ── Task ──────────────────────────────────────────────────────────
     def _on_task(self, msg: ReplenishmentOrder):
@@ -319,6 +311,10 @@ class AGVController(Node):
         ir_msg = String()
         ir_msg.data = f"ON:{on_cnt}" if on_cnt else "OFF"
         self._irp.publish(ir_msg)
+
+        # Do not move until we have a confirmed world pose
+        if not self._have_pose:
+            return
 
         if self._waiting:
             self._wait_elapsed += CTRL_DT

@@ -65,8 +65,10 @@ def generate_launch_description():
                 "/model/agv_1/odometry@nav_msgs/msg/Odometry[ignition.msgs.Odometry",
                 "/model/agv_2/odometry@nav_msgs/msg/Odometry[ignition.msgs.Odometry",
                 "/model/agv_3/odometry@nav_msgs/msg/Odometry[ignition.msgs.Odometry",
-                # world pose info: exact world-frame poses for every model (Ignition → ROS2)
-                "/world/agv_factory/pose/info@tf2_msgs/msg/TFMessage[ignition.msgs.Pose_V",
+                # per-model world-frame pose (Ignition -> ROS2)
+                "/model/agv_1/pose@tf2_msgs/msg/TFMessage[ignition.msgs.Pose_V",
+                "/model/agv_2/pose@tf2_msgs/msg/TFMessage[ignition.msgs.Pose_V",
+                "/model/agv_3/pose@tf2_msgs/msg/TFMessage[ignition.msgs.Pose_V",
             ],
             output="screen",
         )
