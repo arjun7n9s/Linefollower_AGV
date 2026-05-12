@@ -61,14 +61,10 @@ def generate_launch_description():
                 "/model/agv_1/cmd_vel@geometry_msgs/msg/Twist]ignition.msgs.Twist",
                 "/model/agv_2/cmd_vel@geometry_msgs/msg/Twist]ignition.msgs.Twist",
                 "/model/agv_3/cmd_vel@geometry_msgs/msg/Twist]ignition.msgs.Twist",
-                # odometry: Ignition → ROS2 (kept for velocity data)
+                # odometry: Ignition → ROS2
                 "/model/agv_1/odometry@nav_msgs/msg/Odometry[ignition.msgs.Odometry",
                 "/model/agv_2/odometry@nav_msgs/msg/Odometry[ignition.msgs.Odometry",
                 "/model/agv_3/odometry@nav_msgs/msg/Odometry[ignition.msgs.Odometry",
-                # per-model world-frame pose (Ignition -> ROS2)
-                "/model/agv_1/pose@tf2_msgs/msg/TFMessage[ignition.msgs.Pose_V",
-                "/model/agv_2/pose@tf2_msgs/msg/TFMessage[ignition.msgs.Pose_V",
-                "/model/agv_3/pose@tf2_msgs/msg/TFMessage[ignition.msgs.Pose_V",
             ],
             output="screen",
         )
