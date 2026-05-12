@@ -47,11 +47,13 @@ from agv_interfaces.msg import AGVStatus, ReplenishmentOrder
 
 # ── Tuning ────────────────────────────────────────────────────────────
 SPEED_MAX       = 0.55   # m/s forward speed
-MAX_ANG         = 0.90   # rad/s max angular speed
-SPEED_DAMP      = 0.70   # how much angular correction damps forward speed
-KP_IR           = 0.55   # gain on IR lateral error  (±2 → ±1.1 rad/s)
-KP_HEAD         = 1.60   # gain on heading error
-TURN_THRESH     = 0.28   # rad — stop translating when heading error exceeds this
+CREEP_SPEED     = 0.08   # m/s minimum creep during turns (keeps robot moving)
+MAX_ANG         = 1.20   # rad/s max angular speed
+SPEED_DAMP      = 0.65   # how much angular correction damps forward speed
+KP_IR           = 0.50   # gain on IR lateral error  (±2 → ±1.0 rad/s)
+KP_HEAD         = 2.20   # gain on heading error (higher = faster turns)
+TURN_THRESH     = 0.20   # rad — switch to creep+turn mode above this
+IR_THRESH       = 0.35   # rad — disable IR blending when heading error exceeds this
 GOAL_TOL        = 0.30   # m — arrival tolerance at each node
 LINE_HW         = 0.12   # m — half-width of each line strip (0.12 m strip → ±6 cm)
 CTRL_DT         = 0.05   # s  — 20 Hz
@@ -390,12 +392,19 @@ class AGVController(Node):
 
         # ── Arrived? ──
         if dist < GOAL_TOL:
-            self._stop()
             arrived = self._path.pop(0)
             self.get_logger().info(f"{self._id}: ✓ {arrived}")
             self._leg_start_x = self._x
             self._leg_start_y = self._y
-            return
+            # If path is now empty, handle state transition and stop
+            if not self._path:
+                self._stop()
+                if   self._state == "GOING_TO_DEPOT": self._start_loading()
+                elif self._state == "GOING_TO_SHOP":  self._start_unloading()
+                elif self._state == "RETURNING":      self._set_idle()
+                return
+            # Otherwise fall through immediately to start turning toward next node
+            gx, gy = NODES[self._path[0]]
 
         # ── Heading error toward next node ──
         target_yaw = math.atan2(gy - self._y, gx - self._x)
@@ -404,16 +413,23 @@ class AGVController(Node):
             math.cos(target_yaw - self._yaw),
         )
 
-        # ── Angular command = heading correction + IR line correction ──
-        angular = KP_HEAD * head_err + KP_IR * ir_err
+        # ── Angular command ──
+        # During large heading errors (turning at junction): heading-only, no IR
+        # interference — IR on the crossing line would fight the turn.
+        # During small heading errors (driving straight): blend IR for line centering.
+        if abs(head_err) > IR_THRESH:
+            angular = KP_HEAD * head_err
+        else:
+            angular = KP_HEAD * head_err + KP_IR * ir_err
         angular = max(-MAX_ANG, min(MAX_ANG, angular))
 
-        # Stop translating while making large heading corrections (in-place turn)
+        # During large heading corrections: creep forward slowly while turning
+        # (looks more natural and reaches next line faster than pure in-place turn)
         if abs(head_err) > TURN_THRESH:
-            speed = 0.0
+            speed = CREEP_SPEED
         else:
             speed = SPEED_MAX * (1.0 - SPEED_DAMP * abs(angular) / MAX_ANG)
-            speed = max(0.0, speed)
+            speed = max(CREEP_SPEED, speed)
 
         twist = Twist()
         twist.linear.x  = speed
